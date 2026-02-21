@@ -1,0 +1,70 @@
+import 'package:flutter/material.dart';
+import 'package:financial_hub/shared/theme/app_colors.dart';
+import 'package:financial_hub/shared/theme/app_radius.dart';
+import 'package:financial_hub/shared/theme/app_spacing.dart';
+
+class PrimaryButton extends StatelessWidget {
+  const PrimaryButton({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    this.icon,
+    this.gradient = true,
+    this.loading = false,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+  final IconData? icon;
+  final bool gradient;
+  final bool loading;
+
+  @override
+  Widget build(BuildContext context) {
+    final disabled = onPressed == null || loading;
+
+    final child = loading
+        ? const SizedBox(
+            height: 20,
+            width: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          )
+        : Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 18),
+                const SizedBox(width: AppSpacing.x1),
+              ],
+              Text(label),
+            ],
+          );
+
+    final button = FilledButton(
+      onPressed: disabled ? null : onPressed,
+      style: FilledButton.styleFrom(
+        backgroundColor: gradient ? Colors.transparent : AppColors.primary,
+        shadowColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.button),
+        ),
+      ),
+      child: child,
+    );
+
+    if (!gradient) return button;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: disabled
+            ? const LinearGradient(
+                colors: [Color(0xFFB5BFC8), Color(0xFFA3AFBA)],
+              )
+            : AppColors.primaryButtonGradient,
+        borderRadius: BorderRadius.circular(AppRadius.button),
+      ),
+      child: button,
+    );
+  }
+}
