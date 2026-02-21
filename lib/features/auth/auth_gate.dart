@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:financial_hub/core/app_logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:financial_hub/core/supabase_client.dart';
 import 'package:financial_hub/features/auth/mvp_auth_service.dart';
 import 'package:financial_hub/shared/models/app_state.dart';
 import 'package:financial_hub/features/onboarding/onboarding_screen.dart';
 import 'package:financial_hub/features/auth/auth_screen.dart';
-import 'package:financial_hub/features/pockets/pockets_screen.dart';
+import 'package:financial_hub/features/home/home_shell.dart';
 import 'package:financial_hub/shared/widgets/app_scaffold.dart';
 
 /// Root gate: onboarding -> auth -> app
@@ -40,7 +41,8 @@ class _AuthGateState extends State<AuthGate> {
     if (onboardingComplete && storedPhone != null && storedPhone.isNotEmpty) {
       try {
         await _mvpAuth.ensureSessionAndProfile(phone: storedPhone);
-      } catch (_) {
+      } catch (e, st) {
+        AppLogger.error('Failed to restore MVP auth session', e, st);
         bootstrapError =
             'Could not restore your MVP session. Register again to continue.';
         storedPhone = null;
@@ -92,7 +94,7 @@ class _AuthGateState extends State<AuthGate> {
         onBackToOnboarding: _goBackToOnboarding,
       );
     }
-    return PocketsScreen(
+    return HomeShell(
       onLogout: () async {
         final prefs = await SharedPreferences.getInstance();
         await prefs.remove(AppStateKeys.phone);

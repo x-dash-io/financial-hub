@@ -7,7 +7,7 @@ import 'package:financial_hub/shared/models/pocket.dart';
 import 'package:financial_hub/shared/theme/app_spacing.dart';
 import 'package:financial_hub/shared/theme/app_colors.dart';
 import 'package:financial_hub/shared/widgets/app_card.dart';
-import 'package:financial_hub/shared/widgets/app_text_field.dart';
+import 'package:financial_hub/shared/widgets/amount_keypad_input.dart';
 import 'package:financial_hub/shared/widgets/pocket_selector_strip.dart';
 import 'package:financial_hub/shared/widgets/primary_button.dart';
 import 'package:financial_hub/shared/widgets/secondary_button.dart';
@@ -219,21 +219,21 @@ class _ReallocateSheetState extends State<ReallocateSheet> {
                 },
               ),
               const SizedBox(height: AppSpacing.x2),
-              AppTextField(
+              AmountKeypadInput(
                 controller: _amountController,
-                keyboardType: TextInputType.number,
                 label: 'Amount (KES)',
                 hint: '500',
+                prefixIcon: LucideIcons.coins,
+                iconColor: AppColors.accentPurple,
+                enabled: !_loading,
                 onChanged: (_) {
                   if (_countdownComplete) {
                     setState(() => _countdown = -1);
                   }
+                  if (_error != null) {
+                    setState(() => _error = null);
+                  }
                 },
-                prefixIcon: const Icon(
-                  LucideIcons.coins,
-                  size: 18,
-                  color: AppColors.accentPurple,
-                ),
               ),
               const SizedBox(height: AppSpacing.x2),
               WarningCard(

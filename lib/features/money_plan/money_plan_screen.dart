@@ -1,7 +1,11 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:financial_hub/core/app_logger.dart';
 import 'package:financial_hub/features/behavior/behavior_report_screen.dart';
 import 'package:financial_hub/features/money_plan/money_plan_service.dart';
+import 'package:financial_hub/shared/pockets/pocket_icon_catalog.dart';
 import 'package:financial_hub/shared/theme/app_spacing.dart';
 import 'package:financial_hub/shared/theme/app_colors.dart';
 import 'package:financial_hub/shared/widgets/app_bottom_nav.dart';
@@ -13,15 +17,18 @@ import 'package:financial_hub/shared/widgets/secondary_button.dart';
 import 'package:financial_hub/shared/widgets/warning_card.dart';
 
 class MoneyPlanScreen extends StatefulWidget {
-  const MoneyPlanScreen({super.key, this.onPlanChanged});
+  const MoneyPlanScreen({super.key, this.onPlanChanged, this.onTabSelected});
 
   final VoidCallback? onPlanChanged;
+  final ValueChanged<int>? onTabSelected;
 
   @override
   State<MoneyPlanScreen> createState() => _MoneyPlanScreenState();
 }
 
 class _MoneyPlanScreenState extends State<MoneyPlanScreen> {
+  static const String _autoIconSentinel = '__auto_icon__';
+
   final _service = MoneyPlanService();
   final _planNameController = TextEditingController();
 
@@ -73,7 +80,8 @@ class _MoneyPlanScreenState extends State<MoneyPlanScreen> {
         _planNameController.text = editor.selectedPlan.name;
         _loading = false;
       });
-    } catch (e) {
+    } catch (e, st) {
+      AppLogger.error('Failed to load money plan editor', e, st);
       if (!mounted) return;
       setState(() {
         _loading = false;
@@ -99,7 +107,8 @@ class _MoneyPlanScreenState extends State<MoneyPlanScreen> {
       );
       await _load(selectedPlanId: planId);
       widget.onPlanChanged?.call();
-    } catch (e) {
+    } catch (e, st) {
+      AppLogger.error('Failed to activate plan', e, st);
       if (!mounted) return;
       setState(() {
         _error = e.toString().replaceAll(RegExp(r'Exception:?'), '').trim();
@@ -136,7 +145,8 @@ class _MoneyPlanScreenState extends State<MoneyPlanScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Money plan updated.')));
-    } catch (e) {
+    } catch (e, st) {
+      AppLogger.error('Failed to save plan', e, st);
       if (!mounted) return;
       setState(() {
         _error = e.toString().replaceAll(RegExp(r'Exception:?'), '').trim();
@@ -189,6 +199,8 @@ class _MoneyPlanScreenState extends State<MoneyPlanScreen> {
             percentage: p.percentage,
             isSavings: p.isSavings,
             balance: 0,
+            iconKey: p.iconKey,
+            iconCustom: p.iconCustom,
           ),
         )
         .toList();
@@ -216,7 +228,8 @@ class _MoneyPlanScreenState extends State<MoneyPlanScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('New plan created and activated.')),
       );
-    } catch (e) {
+    } catch (e, st) {
+      AppLogger.error('Failed to create plan', e, st);
       if (!mounted) return;
       setState(() {
         _error = e.toString().replaceAll(RegExp(r'Exception:?'), '').trim();
@@ -270,7 +283,8 @@ class _MoneyPlanScreenState extends State<MoneyPlanScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Plan deleted.')));
-    } catch (e) {
+    } catch (e, st) {
+      AppLogger.error('Failed to delete plan', e, st);
       if (!mounted) return;
       setState(() {
         _error = e.toString().replaceAll(RegExp(r'Exception:?'), '').trim();
@@ -281,12 +295,15 @@ class _MoneyPlanScreenState extends State<MoneyPlanScreen> {
   }
 
   void _addSpendablePocket() {
+    final name = 'Pocket ${_pockets.where((p) => !p.isSavings).length + 1}';
     setState(() {
       _pockets.add(
         EditablePocketDraft(
-          name: 'Pocket ${_pockets.where((p) => !p.isSavings).length + 1}',
+          name: name,
           percentage: 0,
           isSavings: false,
+          iconKey: PocketIconCatalog.inferKey(name: name, isSavings: false),
+          iconCustom: false,
         ),
       );
     });
@@ -298,7 +315,151 @@ class _MoneyPlanScreenState extends State<MoneyPlanScreen> {
     });
   }
 
+  void _onPocketNameChanged(EditablePocketDraft pocket, String value) {
+    setState(() {
+      pocket.name = value;
+      if (!pocket.iconCustom) {
+        pocket.iconKey = PocketIconCatalog.inferKey(
+          name: value,
+          isSavings: pocket.isSavings,
+        );
+      }
+    });
+  }
+
+  Future<void> _pickPocketIcon(int index) async {
+    final pocket = _pockets[index];
+    if (pocket.isSavings || _saving) return;
+
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) {
+        final options = PocketIconCatalog.optionsForPicker(isSavings: false);
+        final inferred = PocketIconCatalog.inferKey(
+          name: pocket.name,
+          isSavings: false,
+        );
+        final inferredMeta = PocketIconCatalog.byKey(inferred);
+
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: AppSpacing.sheet,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Choose pocket icon',
+                  style: Theme.of(ctx).textTheme.titleLarge,
+                ),
+                const SizedBox(height: AppSpacing.x1),
+                Text(
+                  'Pick custom or keep Auto match by pocket name.',
+                  style: Theme.of(ctx).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: AppSpacing.x2),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(inferredMeta.icon, color: inferredMeta.color),
+                  title: const Text('Auto match'),
+                  subtitle: Text('Suggested: ${inferredMeta.label}'),
+                  trailing: !pocket.iconCustom
+                      ? const Icon(LucideIcons.check, color: AppColors.primary)
+                      : null,
+                  onTap: () => Navigator.of(ctx).pop(_autoIconSentinel),
+                ),
+                const SizedBox(height: AppSpacing.x1),
+                SizedBox(
+                  height: 300,
+                  child: GridView.builder(
+                    itemCount: options.length,
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          mainAxisSpacing: AppSpacing.x1,
+                          crossAxisSpacing: AppSpacing.x1,
+                          childAspectRatio: 1.2,
+                        ),
+                    itemBuilder: (context, i) {
+                      final option = options[i];
+                      final selectedNow =
+                          pocket.iconCustom && pocket.iconKey == option.key;
+                      return InkWell(
+                        borderRadius: BorderRadius.circular(14),
+                        onTap: () => Navigator.of(ctx).pop(option.key),
+                        child: Ink(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: selectedNow
+                                  ? option.color
+                                  : AppColors.borderMuted,
+                            ),
+                            color: selectedNow
+                                ? option.color.withValues(alpha: 0.12)
+                                : AppColors.surface,
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(AppSpacing.x1),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(option.icon, color: option.color),
+                                const SizedBox(height: AppSpacing.x0_5),
+                                Text(
+                                  option.label,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(ctx).textTheme.bodyMedium,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (!mounted || selected == null) return;
+
+    setState(() {
+      if (selected == _autoIconSentinel) {
+        pocket.iconCustom = false;
+        pocket.iconKey = PocketIconCatalog.inferKey(
+          name: pocket.name,
+          isSavings: pocket.isSavings,
+        );
+      } else {
+        pocket.iconCustom = true;
+        pocket.iconKey = selected;
+      }
+    });
+  }
+
   void _onNavTap(int index) {
+    _handleNavTap(index);
+  }
+
+  Future<void> _handleNavTap(int index) async {
+    if (index == 1) return;
+    final canLeave = await _canLeaveScreen();
+    if (!canLeave) return;
+    if (!mounted) return;
+
+    if (widget.onTabSelected != null) {
+      widget.onTabSelected!(index);
+      return;
+    }
+
     switch (index) {
       case 0:
         Navigator.of(context).popUntil((route) => route.isFirst);
@@ -320,6 +481,87 @@ class _MoneyPlanScreenState extends State<MoneyPlanScreen> {
     final savings = _pockets.where((p) => p.isSavings).toList();
     if (savings.isEmpty) return 0;
     return savings.first.percentage;
+  }
+
+  bool get _hasDraftChanges {
+    final editor = _editor;
+    if (editor == null) return false;
+    if (_planNameController.text.trim() != editor.selectedPlan.name.trim()) {
+      return true;
+    }
+    if (_pockets.length != editor.pockets.length) return true;
+    for (var i = 0; i < _pockets.length; i++) {
+      if (!_sameDraft(_pockets[i], editor.pockets[i])) return true;
+    }
+    return false;
+  }
+
+  bool _sameDraft(EditablePocketDraft a, EditablePocketDraft b) {
+    return a.id == b.id &&
+        a.name.trim() == b.name.trim() &&
+        a.percentage == b.percentage &&
+        a.isSavings == b.isSavings &&
+        a.iconKey == b.iconKey &&
+        a.iconCustom == b.iconCustom;
+  }
+
+  Future<bool> _confirmDiscardChanges() async {
+    final discard =
+        await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Discard unsaved changes?'),
+            content: const Text(
+              'You have unsaved plan edits. Leave this screen and discard them?',
+            ),
+            actions: [
+              SecondaryButton(
+                label: 'Stay',
+                icon: LucideIcons.x,
+                onPressed: () => Navigator.of(ctx).pop(false),
+              ),
+              PrimaryButton(
+                label: 'Discard',
+                icon: LucideIcons.chevronRight,
+                gradient: false,
+                onPressed: () => Navigator.of(ctx).pop(true),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+    return discard;
+  }
+
+  Future<bool> _canLeaveScreen() async {
+    if (!_hasDraftChanges) return true;
+    return _confirmDiscardChanges();
+  }
+
+  List<_DonutSegment> get _donutSegments {
+    const palette = [
+      AppColors.accentBlue,
+      AppColors.accentAmber,
+      AppColors.accentViolet,
+      AppColors.accentRed,
+      AppColors.accentTeal,
+    ];
+    var nonSavings = 0;
+    final segments = <_DonutSegment>[];
+    for (final pocket in _pockets) {
+      final color = pocket.isSavings
+          ? AppColors.primary
+          : palette[(nonSavings++) % palette.length];
+      segments.add(
+        _DonutSegment(
+          label: pocket.name.trim().isEmpty ? 'Pocket' : pocket.name.trim(),
+          percentage: pocket.percentage.clamp(0, 100).toInt(),
+          color: color,
+          savings: pocket.isSavings,
+        ),
+      );
+    }
+    return segments;
   }
 
   @override
@@ -372,8 +614,14 @@ class _MoneyPlanScreenState extends State<MoneyPlanScreen> {
                             .toList(),
                         onChanged: _saving
                             ? null
-                            : (value) {
+                            : (value) async {
                                 if (value == null) return;
+                                if (value == _selectedPlanId) return;
+                                if (_hasDraftChanges) {
+                                  final discard =
+                                      await _confirmDiscardChanges();
+                                  if (!discard) return;
+                                }
                                 _activatePlan(value);
                               },
                       ),
@@ -383,6 +631,7 @@ class _MoneyPlanScreenState extends State<MoneyPlanScreen> {
                         label: 'Default plan name',
                         hint: 'My Money Plan',
                         prefixIcon: const Icon(LucideIcons.pencil, size: 18),
+                        onChanged: (_) => setState(() {}),
                       ),
                       const SizedBox(height: AppSpacing.x2),
                       Row(
@@ -422,9 +671,23 @@ class _MoneyPlanScreenState extends State<MoneyPlanScreen> {
                   type: WarningCardType.info,
                 ),
                 const SizedBox(height: AppSpacing.x2),
+                if (_hasDraftChanges) ...[
+                  const WarningCard(
+                    title: 'Unsaved changes',
+                    message:
+                        'You have edits that are not saved yet. Save before leaving to keep them.',
+                    type: WarningCardType.warning,
+                  ),
+                  const SizedBox(height: AppSpacing.x2),
+                ],
                 ..._pockets.asMap().entries.map((entry) {
                   final index = entry.key;
                   final pocket = entry.value;
+                  final iconMeta = PocketIconCatalog.resolve(
+                    isSavings: pocket.isSavings,
+                    iconKey: pocket.iconKey,
+                    name: pocket.name,
+                  );
 
                   return AppCard(
                     margin: const EdgeInsets.only(bottom: AppSpacing.x2),
@@ -441,17 +704,29 @@ class _MoneyPlanScreenState extends State<MoneyPlanScreen> {
                                     ? 'Savings pocket'
                                     : 'Pocket name',
                                 prefixIcon: Icon(
-                                  pocket.isSavings
-                                      ? LucideIcons.piggyBank
-                                      : LucideIcons.wallet2,
+                                  iconMeta.icon,
                                   size: 18,
-                                  color: pocket.isSavings
-                                      ? AppColors.primary
-                                      : AppColors.accentBlue,
+                                  color: iconMeta.color,
                                 ),
-                                onChanged: (v) => pocket.name = v,
+                                onChanged: (v) =>
+                                    _onPocketNameChanged(pocket, v),
                               ),
                             ),
+                            if (!pocket.isSavings) ...[
+                              const SizedBox(width: AppSpacing.x0_5),
+                              IconButton(
+                                onPressed: _saving
+                                    ? null
+                                    : () => _pickPocketIcon(index),
+                                icon: Icon(
+                                  iconMeta.icon,
+                                  color: iconMeta.color,
+                                ),
+                                tooltip: pocket.iconCustom
+                                    ? 'Edit custom icon'
+                                    : 'Set custom icon',
+                              ),
+                            ],
                             if (!pocket.isSavings) ...[
                               const SizedBox(width: AppSpacing.x1),
                               IconButton(
@@ -467,6 +742,17 @@ class _MoneyPlanScreenState extends State<MoneyPlanScreen> {
                             ],
                           ],
                         ),
+                        if (!pocket.isSavings)
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              pocket.iconCustom
+                                  ? 'Icon: ${iconMeta.label} (custom)'
+                                  : 'Icon: ${iconMeta.label} (auto by name)',
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(color: AppColors.textSecondary),
+                            ),
+                          ),
                         const SizedBox(height: AppSpacing.x2),
                         AppTextField(
                           key: ValueKey('pct-${pocket.id ?? index}'),
@@ -529,6 +815,12 @@ class _MoneyPlanScreenState extends State<MoneyPlanScreen> {
                     ],
                   ),
                 ),
+                const SizedBox(height: AppSpacing.x2),
+                _AllocationDonutCard(
+                  segments: _donutSegments,
+                  totalPercentage: _totalPercentage,
+                  savingsPercentage: _savingsPercentage,
+                ),
                 if (_error != null) ...[
                   const SizedBox(height: AppSpacing.x2),
                   WarningCard(message: _error!, type: WarningCardType.error),
@@ -538,37 +830,220 @@ class _MoneyPlanScreenState extends State<MoneyPlanScreen> {
                   label: 'Save Plan',
                   icon: LucideIcons.save,
                   loading: _saving,
-                  onPressed: _savePlan,
+                  onPressed: _hasDraftChanges ? _savePlan : null,
                 ),
                 const SizedBox(height: AppSpacing.x3),
               ],
             ),
           );
 
-    return AppScaffold(
-      title: 'Money Plan',
-      body: body,
-      bottomNavigation: BottomNav(
-        selectedIndex: 1,
-        onSelected: _onNavTap,
-        items: const [
-          BottomNavItem(
-            label: 'Pockets',
-            icon: LucideIcons.wallet2,
-            color: AppColors.primary,
+    return PopScope(
+      canPop: !_hasDraftChanges,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        final navigator = Navigator.of(context);
+        final canLeave = await _canLeaveScreen();
+        if (!canLeave || !navigator.mounted) return;
+        navigator.pop();
+      },
+      child: AppScaffold(
+        title: 'Money Plan',
+        body: body,
+        bottomNavigation: BottomNav(
+          selectedIndex: 1,
+          onSelected: _onNavTap,
+          items: const [
+            BottomNavItem(
+              label: 'Pockets',
+              icon: LucideIcons.wallet2,
+              color: AppColors.primary,
+            ),
+            BottomNavItem(
+              label: 'Plan',
+              icon: LucideIcons.settings2,
+              color: AppColors.accentBlue,
+            ),
+            BottomNavItem(
+              label: 'Insights',
+              icon: LucideIcons.barChart3,
+              color: AppColors.accentPurple,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DonutSegment {
+  const _DonutSegment({
+    required this.label,
+    required this.percentage,
+    required this.color,
+    required this.savings,
+  });
+
+  final String label;
+  final int percentage;
+  final Color color;
+  final bool savings;
+}
+
+class _AllocationDonutCard extends StatelessWidget {
+  const _AllocationDonutCard({
+    required this.segments,
+    required this.totalPercentage,
+    required this.savingsPercentage,
+  });
+
+  final List<_DonutSegment> segments;
+  final int totalPercentage;
+  final int savingsPercentage;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      softShadow: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Live allocation preview',
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
-          BottomNavItem(
-            label: 'Plan',
-            icon: LucideIcons.settings2,
-            color: AppColors.accentBlue,
+          const SizedBox(height: AppSpacing.x2),
+          Center(
+            child: SizedBox(
+              width: 170,
+              height: 170,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  CustomPaint(
+                    size: const Size.square(170),
+                    painter: _AllocationDonutPainter(
+                      segments: segments,
+                      totalPercentage: totalPercentage,
+                    ),
+                  ),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '$totalPercentage%',
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(fontWeight: FontWeight.w800),
+                      ),
+                      Text(
+                        'Savings $savingsPercentage%',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
-          BottomNavItem(
-            label: 'Insights',
-            icon: LucideIcons.barChart3,
-            color: AppColors.accentPurple,
+          const SizedBox(height: AppSpacing.x2),
+          Wrap(
+            spacing: AppSpacing.x1,
+            runSpacing: AppSpacing.x1,
+            children: segments.map((segment) {
+              return Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.x1,
+                  vertical: AppSpacing.x0_5,
+                ),
+                decoration: BoxDecoration(
+                  color: segment.color.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: segment.color,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.x0_5),
+                    Text(
+                      '${segment.label} ${segment.percentage}%',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontWeight: segment.savings
+                            ? FontWeight.w700
+                            : FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
           ),
         ],
       ),
     );
+  }
+}
+
+class _AllocationDonutPainter extends CustomPainter {
+  const _AllocationDonutPainter({
+    required this.segments,
+    required this.totalPercentage,
+  });
+
+  final List<_DonutSegment> segments;
+  final int totalPercentage;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    final radius = math.min(size.width, size.height) / 2;
+    final stroke = radius * 0.22;
+    final rect = Rect.fromCircle(center: center, radius: radius - stroke / 2);
+
+    final trackPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = stroke
+      ..color = AppColors.surfaceMuted;
+    canvas.drawArc(rect, 0, math.pi * 2, false, trackPaint);
+
+    if (totalPercentage <= 0) return;
+
+    final total = totalPercentage.toDouble();
+    var startAngle = -math.pi / 2;
+    for (final segment in segments) {
+      if (segment.percentage <= 0) continue;
+      final sweep = (segment.percentage / total) * (math.pi * 2);
+      final paint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..strokeWidth = stroke
+        ..color = segment.color;
+      canvas.drawArc(rect, startAngle, sweep, false, paint);
+      startAngle += sweep;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _AllocationDonutPainter oldDelegate) {
+    if (oldDelegate.totalPercentage != totalPercentage) return true;
+    if (oldDelegate.segments.length != segments.length) return true;
+    for (var i = 0; i < segments.length; i++) {
+      final left = segments[i];
+      final right = oldDelegate.segments[i];
+      if (left.label != right.label ||
+          left.percentage != right.percentage ||
+          left.color != right.color) {
+        return true;
+      }
+    }
+    return false;
   }
 }

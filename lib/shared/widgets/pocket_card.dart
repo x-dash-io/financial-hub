@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:financial_hub/shared/pockets/pocket_icon_catalog.dart';
 import 'package:financial_hub/shared/theme/app_radius.dart';
 import 'package:financial_hub/shared/theme/app_shadows.dart';
 import 'package:financial_hub/shared/theme/app_spacing.dart';
@@ -12,6 +13,9 @@ class PocketCard extends StatelessWidget {
     required this.balance,
     required this.progress,
     required this.locked,
+    this.iconKey,
+    this.spentAmount,
+    this.spentLabel = 'this month',
     this.onTap,
   });
 
@@ -19,13 +23,21 @@ class PocketCard extends StatelessWidget {
   final int balance;
   final double progress;
   final bool locked;
+  final String? iconKey;
+  final int? spentAmount;
+  final String spentLabel;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final icon = _iconForName(name, locked);
-    final accent = _iconColorForName(name, locked);
+    final iconMeta = PocketIconCatalog.resolve(
+      isSavings: locked,
+      iconKey: iconKey,
+      name: name,
+    );
+    final icon = iconMeta.icon;
+    final accent = iconMeta.color;
     final progressValue = progress.clamp(0.0, 1.0);
     final cardTint = locked ? AppColors.savingsCardTint : AppColors.surface;
     final borderColor = locked
@@ -119,6 +131,16 @@ class PocketCard extends StatelessWidget {
                                 letterSpacing: -0.4,
                               ),
                             ),
+                            if (!locked && spentAmount != null) ...[
+                              const SizedBox(height: AppSpacing.x0_5),
+                              Text(
+                                'Spent $spentLabel: KES ${spentAmount!}',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: AppColors.textSecondary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -162,34 +184,6 @@ class PocketCard extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  static IconData _iconForName(String name, bool locked) {
-    if (locked) return LucideIcons.piggyBank;
-    final lower = name.toLowerCase();
-    if (lower.contains('food')) return LucideIcons.utensils;
-    if (lower.contains('transport') || lower.contains('travel')) {
-      return LucideIcons.car;
-    }
-    if (lower.contains('bills') || lower.contains('home')) {
-      return LucideIcons.home;
-    }
-    if (lower.contains('shopping')) return LucideIcons.shoppingBag;
-    return LucideIcons.wallet2;
-  }
-
-  static Color _iconColorForName(String name, bool locked) {
-    if (locked) return AppColors.primary;
-    final lower = name.toLowerCase();
-    if (lower.contains('food')) return AppColors.accentAmber;
-    if (lower.contains('transport') || lower.contains('travel')) {
-      return AppColors.accentBlue;
-    }
-    if (lower.contains('bills') || lower.contains('home')) {
-      return AppColors.accentViolet;
-    }
-    if (lower.contains('shopping')) return AppColors.accentRed;
-    return AppColors.accentTeal;
   }
 }
 

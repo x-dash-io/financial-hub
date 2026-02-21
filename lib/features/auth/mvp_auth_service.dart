@@ -125,24 +125,32 @@ class MvpAuthService {
             'plan_id': planId,
             'name': 'Savings',
             'is_savings': true,
+            'icon_key': 'savings',
+            'icon_custom': false,
           },
           {
             'profile_id': profileId,
             'plan_id': planId,
             'name': 'Transport',
             'is_savings': false,
+            'icon_key': 'transport',
+            'icon_custom': false,
           },
           {
             'profile_id': profileId,
             'plan_id': planId,
             'name': 'Food',
             'is_savings': false,
+            'icon_key': 'food',
+            'icon_custom': false,
           },
           {
             'profile_id': profileId,
             'plan_id': planId,
             'name': 'Other',
             'is_savings': false,
+            'icon_key': 'other',
+            'icon_custom': false,
           },
         ])
         .select('id,name');

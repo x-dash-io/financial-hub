@@ -2,6 +2,7 @@ import 'package:country_code_picker/country_code_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:financial_hub/core/app_logger.dart';
 import 'package:financial_hub/features/auth/mvp_auth_service.dart';
 import 'package:financial_hub/shared/models/app_state.dart';
 import 'package:financial_hub/shared/theme/app_radius.dart';
@@ -78,7 +79,8 @@ class _AuthScreenState extends State<AuthScreen> {
       if (!mounted) return;
       setState(() => _loading = false);
       widget.onSuccess();
-    } catch (_) {
+    } catch (e, st) {
+      AppLogger.error('Registration failed', e, st);
       if (!mounted) return;
       setState(() {
         _loading = false;

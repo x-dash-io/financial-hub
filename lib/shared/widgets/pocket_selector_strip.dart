@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:financial_hub/shared/pockets/pocket_icon_catalog.dart';
 import 'package:financial_hub/shared/models/pocket.dart';
 import 'package:financial_hub/shared/theme/app_colors.dart';
 import 'package:financial_hub/shared/theme/app_radius.dart';
@@ -80,7 +80,12 @@ class _PocketSelectorTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent = _accentForPocket(pocket);
+    final iconMeta = PocketIconCatalog.resolve(
+      isSavings: pocket.isSavings,
+      iconKey: pocket.iconKey,
+      name: pocket.name,
+    );
+    final accent = iconMeta.color;
     final disabledColor = AppColors.accentSlate.withValues(alpha: 0.7);
     final fg = disabled
         ? disabledColor
@@ -131,7 +136,7 @@ class _PocketSelectorTile extends StatelessWidget {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(_iconForPocket(pocket), size: 16, color: fg),
+                      Icon(iconMeta.icon, size: 16, color: fg),
                       const SizedBox(width: AppSpacing.x0_5),
                       if (pocket.isSavings)
                         Text(
@@ -168,33 +173,5 @@ class _PocketSelectorTile extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  static IconData _iconForPocket(Pocket pocket) {
-    if (pocket.isSavings) return LucideIcons.piggyBank;
-    final name = pocket.name.toLowerCase();
-    if (name.contains('food')) return LucideIcons.utensils;
-    if (name.contains('transport') || name.contains('travel')) {
-      return LucideIcons.car;
-    }
-    if (name.contains('bills') || name.contains('home')) {
-      return LucideIcons.home;
-    }
-    if (name.contains('shopping')) return LucideIcons.shoppingBag;
-    return LucideIcons.wallet2;
-  }
-
-  static Color _accentForPocket(Pocket pocket) {
-    if (pocket.isSavings) return AppColors.primary;
-    final name = pocket.name.toLowerCase();
-    if (name.contains('food')) return AppColors.accentAmber;
-    if (name.contains('transport') || name.contains('travel')) {
-      return AppColors.accentBlue;
-    }
-    if (name.contains('bills') || name.contains('home')) {
-      return AppColors.accentViolet;
-    }
-    if (name.contains('shopping')) return AppColors.accentRed;
-    return AppColors.accentPurple;
   }
 }

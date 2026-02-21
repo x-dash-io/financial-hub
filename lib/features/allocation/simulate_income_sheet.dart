@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:financial_hub/core/app_logger.dart';
 import 'package:financial_hub/features/allocation/allocation_service.dart';
 import 'package:financial_hub/shared/models/pocket.dart';
+import 'package:financial_hub/shared/pockets/pocket_icon_catalog.dart';
 import 'package:financial_hub/shared/theme/app_radius.dart';
 import 'package:financial_hub/shared/theme/app_spacing.dart';
 import 'package:financial_hub/shared/theme/app_colors.dart';
 import 'package:financial_hub/shared/widgets/app_card.dart';
-import 'package:financial_hub/shared/widgets/app_text_field.dart';
+import 'package:financial_hub/shared/widgets/amount_keypad_input.dart';
 import 'package:financial_hub/shared/widgets/primary_button.dart';
 import 'package:financial_hub/shared/widgets/warning_card.dart';
 
@@ -68,10 +70,11 @@ class _SimulateIncomeSheetState extends State<SimulateIncomeSheet>
     });
 
     try {
+      final reference = 'simulate_${DateTime.now().microsecondsSinceEpoch}';
       final result = await _service.allocate(
         planId: widget.planId,
         income: amount,
-        reference: 'simulate',
+        reference: reference,
       );
       if (!mounted) return;
       setState(() {
@@ -80,7 +83,8 @@ class _SimulateIncomeSheetState extends State<SimulateIncomeSheet>
         _receivedAmount = amount;
       });
       _resultController.forward(from: 0);
-    } catch (e) {
+    } catch (e, st) {
+      AppLogger.error('Simulated allocation failed', e, st);
       if (!mounted) return;
       setState(() {
         _loading = false;
@@ -103,18 +107,6 @@ class _SimulateIncomeSheetState extends State<SimulateIncomeSheet>
       rows.add(_AllocationRow(pocket: pocket, amount: amount));
     }
     return rows;
-  }
-
-  Color _rowAccent({required int index, required bool savings}) {
-    if (savings) return AppColors.primary;
-    const palette = [
-      AppColors.accentBlue,
-      AppColors.accentAmber,
-      AppColors.accentViolet,
-      AppColors.accentRed,
-      AppColors.accentSlate,
-    ];
-    return palette[index % palette.length];
   }
 
   Widget _resultHeader(BuildContext context) {
@@ -192,10 +184,13 @@ class _SimulateIncomeSheetState extends State<SimulateIncomeSheet>
       parent: _resultController,
       curve: Interval(start, end, curve: Curves.easeOutCubic),
     );
-    final accent = _rowAccent(index: index, savings: row.pocket.isSavings);
-    final icon = row.pocket.isSavings
-        ? LucideIcons.piggyBank
-        : LucideIcons.wallet2;
+    final iconMeta = PocketIconCatalog.resolve(
+      isSavings: row.pocket.isSavings,
+      iconKey: row.pocket.iconKey,
+      name: row.pocket.name,
+    );
+    final accent = iconMeta.color;
+    final icon = iconMeta.icon;
 
     return AnimatedBuilder(
       animation: curve,
@@ -316,16 +311,16 @@ class _SimulateIncomeSheetState extends State<SimulateIncomeSheet>
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                     const SizedBox(height: AppSpacing.x2),
-                    AppTextField(
+                    AmountKeypadInput(
                       controller: _amountController,
-                      keyboardType: TextInputType.number,
                       label: 'Amount (KES)',
                       hint: '5000',
-                      prefixIcon: const Icon(
-                        LucideIcons.coins,
-                        size: 18,
-                        color: AppColors.accentBlue,
-                      ),
+                      prefixIcon: LucideIcons.coins,
+                      iconColor: AppColors.accentBlue,
+                      enabled: !_loading,
+                      onChanged: (_) {
+                        if (_error != null) setState(() => _error = null);
+                      },
                     ),
                     if (_error != null) ...[
                       const SizedBox(height: AppSpacing.x2),

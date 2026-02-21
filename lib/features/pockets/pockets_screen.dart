@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:financial_hub/core/app_logger.dart';
 import 'package:financial_hub/core/sms_income_listener.dart';
 import 'package:financial_hub/core/sms_parser.dart';
 import 'package:financial_hub/core/sms_permission.dart';
 import 'package:financial_hub/core/supabase_client.dart';
+import 'package:financial_hub/features/allocation/allocation_result_sheet.dart';
 import 'package:financial_hub/features/allocation/allocation_service.dart';
 import 'package:financial_hub/features/allocation/simulate_income_sheet.dart';
 import 'package:financial_hub/features/behavior/behavior_report_screen.dart';
@@ -13,6 +15,7 @@ import 'package:financial_hub/features/pockets/pockets_repository.dart';
 import 'package:financial_hub/features/reallocation/reallocate_sheet.dart';
 import 'package:financial_hub/features/spending/spend_sheet.dart';
 import 'package:financial_hub/shared/models/app_state.dart';
+import 'package:financial_hub/shared/models/latest_allocation_snapshot.dart';
 import 'package:financial_hub/shared/models/pocket.dart';
 import 'package:financial_hub/shared/theme/app_colors.dart';
 import 'package:financial_hub/shared/theme/app_spacing.dart';
@@ -25,9 +28,10 @@ import 'package:financial_hub/shared/widgets/secondary_button.dart';
 import 'package:financial_hub/shared/widgets/warning_card.dart';
 
 class PocketsScreen extends StatefulWidget {
-  const PocketsScreen({super.key, this.onLogout});
+  const PocketsScreen({super.key, this.onLogout, this.onTabSelected});
 
   final Future<void> Function()? onLogout;
+  final ValueChanged<int>? onTabSelected;
 
   @override
   State<PocketsScreen> createState() => _PocketsScreenState();
@@ -39,11 +43,14 @@ class _PocketsScreenState extends State<PocketsScreen> {
   final _smsListener = SmsIncomeListener();
 
   List<Pocket> _pockets = [];
+  Map<String, int> _spentByPocketId = const {};
   String? _planId;
   String? _profileId;
+  LatestAllocationSnapshot? _latestAllocation;
   bool _loading = true;
   bool _smsPermissionAsked = false;
   bool _navigating = false;
+  String? _loadError;
 
   @override
   void initState() {
@@ -101,10 +108,24 @@ class _PocketsScreenState extends State<PocketsScreen> {
           content: Text('Income received and allocated across your pockets.'),
         ),
       );
-    } catch (_) {}
+    } catch (e, st) {
+      AppLogger.error('Automatic SMS allocation failed', e, st);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Could not auto-allocate this SMS income. Try Simulate income.',
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> _openMoneyPlan() async {
+    if (widget.onTabSelected != null) {
+      widget.onTabSelected!(1);
+      return;
+    }
     if (_navigating) return;
     _navigating = true;
     try {
@@ -125,6 +146,10 @@ class _PocketsScreenState extends State<PocketsScreen> {
   }
 
   Future<void> _openBehaviorReport() async {
+    if (widget.onTabSelected != null) {
+      widget.onTabSelected!(2);
+      return;
+    }
     if (_navigating) return;
     _navigating = true;
     try {
@@ -164,6 +189,9 @@ class _PocketsScreenState extends State<PocketsScreen> {
           _planId = null;
           _profileId = null;
           _pockets = [];
+          _spentByPocketId = const {};
+          _latestAllocation = null;
+          _loadError = 'Profile not found. Register again to continue.';
         });
         return;
       }
@@ -176,25 +204,45 @@ class _PocketsScreenState extends State<PocketsScreen> {
           _planId = null;
           _profileId = profileId;
           _pockets = [];
+          _spentByPocketId = const {};
+          _latestAllocation = null;
+          _loadError = 'No active plan found. Open Money Plan to set one.';
         });
         return;
       }
 
-      final pockets = await _repo.getPockets(planId);
+      final startOfMonth = _startOfMonthLocal();
+      final pocketsFuture = _repo.getPockets(planId);
+      final latestAllocationFuture = _repo.getLatestAllocation(planId);
+      final spentByPocketFuture = _repo.getSpentByPocketSince(
+        planId: planId,
+        startInclusive: startOfMonth,
+      );
+      final pockets = await pocketsFuture;
+      final latestAllocation = await latestAllocationFuture;
+      final spentByPocket = await spentByPocketFuture;
       if (!mounted) return;
       setState(() {
         _planId = planId;
         _profileId = profileId;
         _pockets = pockets;
+        _spentByPocketId = spentByPocket;
+        _latestAllocation = latestAllocation;
         _loading = false;
+        _loadError = null;
       });
-    } catch (_) {
+    } catch (e, st) {
+      AppLogger.error('Failed to load pockets dashboard', e, st);
       if (mounted) {
         setState(() {
           _loading = false;
           _planId = null;
           _profileId = null;
           _pockets = [];
+          _spentByPocketId = const {};
+          _latestAllocation = null;
+          _loadError =
+              'Could not load pockets right now. Pull to refresh and try again.';
         });
       }
     }
@@ -212,6 +260,10 @@ class _PocketsScreenState extends State<PocketsScreen> {
   }
 
   void _onBottomNavTap(int index) {
+    if (widget.onTabSelected != null) {
+      widget.onTabSelected!(index);
+      return;
+    }
     switch (index) {
       case 0:
         return;
@@ -224,6 +276,173 @@ class _PocketsScreenState extends State<PocketsScreen> {
     }
   }
 
+  int get _spendableBalance => _pockets
+      .where((p) => !p.isSavings)
+      .fold<int>(0, (sum, p) => sum + p.balance);
+
+  int get _savingsBalance => _pockets
+      .where((p) => p.isSavings)
+      .fold<int>(0, (sum, p) => sum + p.balance);
+
+  int get _spentThisMonth =>
+      _spentByPocketId.values.fold<int>(0, (sum, value) => sum + value);
+
+  DateTime _startOfMonthLocal() {
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, 1);
+  }
+
+  String _formatLastAllocation(DateTime? value) {
+    if (value == null) return 'No allocations yet';
+    final now = DateTime.now();
+    final local = value.toLocal();
+    final diff = now.difference(local);
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inHours < 1) return '${diff.inMinutes}m ago';
+    if (diff.inDays < 1) return '${diff.inHours}h ago';
+    final hour = local.hour % 12 == 0 ? 12 : local.hour % 12;
+    final minute = local.minute.toString().padLeft(2, '0');
+    final period = local.hour >= 12 ? 'PM' : 'AM';
+    return '${local.day}/${local.month} $hour:$minute $period';
+  }
+
+  void _openLatestAllocationBreakdown() {
+    final latest = _latestAllocation;
+    if (latest == null || _pockets.isEmpty) return;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => AllocationResultSheet(
+        receivedAmount: latest.receivedAmount,
+        breakdownByPocketId: latest.breakdownByPocketId,
+        pockets: _pockets,
+        allocatedAt: latest.createdAt,
+      ),
+    );
+  }
+
+  Widget _buildTodaySummary() {
+    return AppCard(
+      softShadow: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Today', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: AppSpacing.x2),
+          Row(
+            children: [
+              Expanded(
+                child: _SummaryMetric(
+                  label: 'Spendable',
+                  value: 'KES $_spendableBalance',
+                  accent: AppColors.accentBlue,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.x1),
+              Expanded(
+                child: _SummaryMetric(
+                  label: 'Savings (locked)',
+                  value: 'KES $_savingsBalance',
+                  accent: AppColors.primary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.x1),
+          _SummaryMetric(
+            label: 'Spent this month',
+            value: 'KES $_spentThisMonth',
+            accent: AppColors.accentRed,
+            compact: true,
+          ),
+          const SizedBox(height: AppSpacing.x1),
+          _SummaryMetric(
+            label: 'Last allocation',
+            value: _formatLastAllocation(_latestAllocation?.createdAt),
+            accent: AppColors.accentPurple,
+            compact: true,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLatestAllocationCard() {
+    final latest = _latestAllocation;
+    if (latest == null) {
+      return const WarningCard(
+        title: 'Latest allocation',
+        message:
+            'No allocation history yet. Simulate or detect incoming income.',
+        type: WarningCardType.info,
+      );
+    }
+    return AppCard(
+      softShadow: true,
+      child: Row(
+        children: [
+          Container(
+            width: AppSpacing.x5,
+            height: AppSpacing.x5,
+            decoration: BoxDecoration(
+              color: AppColors.primarySoft,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              LucideIcons.badgeCheck,
+              size: 18,
+              color: AppColors.primaryDeep,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.x2),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Latest allocation',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.x0_5),
+                Text('KES ${latest.receivedAmount}'),
+                Text(
+                  _formatLastAllocation(latest.createdAt),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+          TextButton.icon(
+            onPressed: _openLatestAllocationBreakdown,
+            icon: const Icon(LucideIcons.list, size: 16),
+            label: const Text('View breakdown'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoadingSkeleton() {
+    return ListView(
+      padding: AppSpacing.page,
+      children: const [
+        _SkeletonBlock(height: 128),
+        SizedBox(height: AppSpacing.x2),
+        _SkeletonBlock(height: 94),
+        SizedBox(height: AppSpacing.x2),
+        _SkeletonBlock(height: 110),
+        SizedBox(height: AppSpacing.x2),
+        _SkeletonBlock(height: 110),
+        SizedBox(height: AppSpacing.x2),
+        _SkeletonBlock(height: 110),
+        SizedBox(height: AppSpacing.x2),
+        _SkeletonBlock(height: 64),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final hasSpendable = _pockets.any((p) => !p.isSavings);
@@ -233,7 +452,7 @@ class _PocketsScreenState extends State<PocketsScreen> {
     );
 
     final body = _loading
-        ? const Center(child: CircularProgressIndicator())
+        ? _buildLoadingSkeleton()
         : _pockets.isEmpty
         ? Center(
             child: Padding(
@@ -241,6 +460,13 @@ class _PocketsScreenState extends State<PocketsScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  if (_loadError != null) ...[
+                    WarningCard(
+                      message: _loadError!,
+                      type: WarningCardType.error,
+                    ),
+                    const SizedBox(height: AppSpacing.x2),
+                  ],
                   const WarningCard(
                     title: 'No pockets yet',
                     message:
@@ -265,6 +491,13 @@ class _PocketsScreenState extends State<PocketsScreen> {
                   child: ListView(
                     padding: AppSpacing.page,
                     children: [
+                      if (_loadError != null) ...[
+                        WarningCard(
+                          message: _loadError!,
+                          type: WarningCardType.error,
+                        ),
+                        const SizedBox(height: AppSpacing.x2),
+                      ],
                       const WarningCard(
                         title: 'Simple flow',
                         message:
@@ -272,15 +505,22 @@ class _PocketsScreenState extends State<PocketsScreen> {
                         type: WarningCardType.info,
                       ),
                       const SizedBox(height: AppSpacing.x2),
+                      _buildTodaySummary(),
+                      const SizedBox(height: AppSpacing.x2),
+                      _buildLatestAllocationCard(),
+                      const SizedBox(height: AppSpacing.x2),
                       ..._pockets.map((pocket) {
                         final progress = totalBalance <= 0
                             ? 0.0
                             : pocket.balance / totalBalance;
+                        final spentAmount = _spentByPocketId[pocket.id] ?? 0;
                         return PocketCard(
                           name: pocket.name,
                           balance: pocket.balance,
                           progress: progress,
                           locked: pocket.isSavings,
+                          iconKey: pocket.iconKey,
+                          spentAmount: pocket.isSavings ? null : spentAmount,
                           onTap: _profileId == null
                               ? null
                               : () => showModalBottomSheet(
@@ -385,6 +625,71 @@ class _PocketsScreenState extends State<PocketsScreen> {
             color: AppColors.accentPurple,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _SummaryMetric extends StatelessWidget {
+  const _SummaryMetric({
+    required this.label,
+    required this.value,
+    required this.accent,
+    this.compact = false,
+  });
+
+  final String label;
+  final String value;
+  final Color accent;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: AppSpacing.x2,
+        vertical: compact ? AppSpacing.x1 : AppSpacing.x2,
+      ),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: AppSpacing.x0_5),
+          Text(
+            value,
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SkeletonBlock extends StatelessWidget {
+  const _SkeletonBlock({required this.height});
+
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      child: Container(
+        height: height,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          color: AppColors.surfaceMuted,
+        ),
       ),
     );
   }

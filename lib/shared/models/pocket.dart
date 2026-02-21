@@ -5,6 +5,8 @@ class Pocket {
   final String name;
   final int balance;
   final bool isSavings;
+  final String? iconKey;
+  final bool iconCustom;
 
   Pocket({
     required this.id,
@@ -13,6 +15,8 @@ class Pocket {
     required this.name,
     required this.balance,
     required this.isSavings,
+    this.iconKey,
+    this.iconCustom = false,
   });
 
   factory Pocket.fromJson(Map<String, dynamic> json) {
@@ -24,6 +28,8 @@ class Pocket {
       name: json['name'] as String,
       balance: (bal as num?)?.toInt() ?? 0,
       isSavings: json['is_savings'] as bool? ?? false,
+      iconKey: json['icon_key'] as String?,
+      iconCustom: json['icon_custom'] as bool? ?? false,
     );
   }
 }

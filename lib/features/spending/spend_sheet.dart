@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:financial_hub/features/spending/spending_service.dart';
 import 'package:financial_hub/shared/models/pocket.dart';
+import 'package:financial_hub/shared/pockets/pocket_icon_catalog.dart';
 import 'package:financial_hub/shared/theme/app_colors.dart';
 import 'package:financial_hub/shared/theme/app_spacing.dart';
 import 'package:financial_hub/shared/widgets/app_card.dart';
-import 'package:financial_hub/shared/widgets/app_text_field.dart';
+import 'package:financial_hub/shared/widgets/amount_keypad_input.dart';
 import 'package:financial_hub/shared/widgets/pocket_selector_strip.dart';
 import 'package:financial_hub/shared/widgets/primary_button.dart';
 import 'package:financial_hub/shared/widgets/warning_card.dart';
@@ -99,15 +100,18 @@ class _SpendSheetState extends State<SpendSheet> {
   @override
   Widget build(BuildContext context) {
     final selectedPocket = _selectedPocket;
+    final selectedIcon = selectedPocket == null
+        ? PocketIconCatalog.byKey(PocketIconCatalog.defaultKey)
+        : PocketIconCatalog.resolve(
+            isSavings: selectedPocket.isSavings,
+            iconKey: selectedPocket.iconKey,
+            name: selectedPocket.name,
+          );
     final title = selectedPocket == null
         ? 'Spend'
         : 'Spend from ${selectedPocket.name}';
-    final titleIcon = selectedPocket?.isSavings == true
-        ? LucideIcons.shieldCheck
-        : LucideIcons.wallet2;
-    final titleColor = selectedPocket?.isSavings == true
-        ? AppColors.primary
-        : AppColors.accentBlue;
+    final titleIcon = selectedIcon.icon;
+    final titleColor = selectedIcon.color;
 
     return Padding(
       padding: AppSpacing.sheet,
@@ -168,26 +172,15 @@ class _SpendSheetState extends State<SpendSheet> {
                 ),
               ],
               const SizedBox(height: AppSpacing.x2),
-              AppCard(
-                padding: AppSpacing.card,
-                softShadow: true,
-                child: AppTextField(
-                  controller: _amountController,
-                  keyboardType: TextInputType.number,
-                  label: 'Amount (KES)',
-                  hint: '0',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 38,
-                    letterSpacing: -0.8,
-                  ),
-                  prefixIcon: const Icon(
-                    LucideIcons.banknote,
-                    size: 20,
-                    color: AppColors.accentPurple,
-                  ),
-                ),
+              AmountKeypadInput(
+                controller: _amountController,
+                label: 'Amount (KES)',
+                hint: '0',
+                iconColor: AppColors.accentPurple,
+                enabled: !_loading,
+                onChanged: (_) {
+                  if (_error != null) setState(() => _error = null);
+                },
               ),
               if (_error != null) ...[
                 const SizedBox(height: AppSpacing.x2),

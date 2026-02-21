@@ -9,6 +9,8 @@ class EditablePocketDraft {
   int percentage;
   bool isSavings;
   int balance;
+  String? iconKey;
+  bool iconCustom;
 
   EditablePocketDraft({
     this.id,
@@ -16,6 +18,8 @@ class EditablePocketDraft {
     required this.percentage,
     required this.isSavings,
     this.balance = 0,
+    this.iconKey,
+    this.iconCustom = false,
   });
 
   EditablePocketDraft copy() {
@@ -25,6 +29,8 @@ class EditablePocketDraft {
       percentage: percentage,
       isSavings: isSavings,
       balance: balance,
+      iconKey: iconKey,
+      iconCustom: iconCustom,
     );
   }
 }
@@ -151,6 +157,8 @@ class MoneyPlanService {
           pocketId: draft.id!,
           name: draft.name.trim(),
           isSavings: draft.isSavings,
+          iconKey: draft.iconKey,
+          iconCustom: draft.iconCustom,
         );
         pocketIdsByDraft[draft] = draft.id!;
       } else {
@@ -159,6 +167,8 @@ class MoneyPlanService {
           planId: planId,
           name: draft.name.trim(),
           isSavings: draft.isSavings,
+          iconKey: draft.iconKey,
+          iconCustom: draft.iconCustom,
         );
         draft.id = createdId;
         pocketIdsByDraft[draft] = createdId;
@@ -190,6 +200,8 @@ class MoneyPlanService {
                 'name': p.name.trim(),
                 'percentage': p.percentage,
                 'is_savings': p.isSavings,
+                'icon_key': p.iconKey,
+                'icon_custom': p.iconCustom,
               },
             )
             .toList(),
@@ -217,6 +229,8 @@ class MoneyPlanService {
         planId: planId,
         name: p.name.trim(),
         isSavings: p.isSavings,
+        iconKey: p.iconKey,
+        iconCustom: p.iconCustom,
       );
       allocations.add({
         'plan_id': planId,
@@ -240,6 +254,8 @@ class MoneyPlanService {
                 'name': p.name.trim(),
                 'percentage': p.percentage,
                 'is_savings': p.isSavings,
+                'icon_key': p.iconKey,
+                'icon_custom': p.iconCustom,
               },
             )
             .toList(),
@@ -349,6 +365,8 @@ class MoneyPlanService {
             isSavings: p.isSavings,
             percentage: allocationByPocket[p.id] ?? 0,
             balance: p.balance,
+            iconKey: p.iconKey,
+            iconCustom: p.iconCustom,
           ),
         )
         .toList();

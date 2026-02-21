@@ -98,6 +98,8 @@ class MoneyPlanRepository {
     required String planId,
     required String name,
     required bool isSavings,
+    String? iconKey,
+    bool iconCustom = false,
   }) async {
     final res = await supabase
         .from('pockets')
@@ -106,6 +108,8 @@ class MoneyPlanRepository {
           'plan_id': planId,
           'name': name,
           'is_savings': isSavings,
+          'icon_key': iconKey,
+          'icon_custom': iconCustom,
         })
         .select('id')
         .single();
@@ -116,10 +120,17 @@ class MoneyPlanRepository {
     required String pocketId,
     required String name,
     required bool isSavings,
+    String? iconKey,
+    bool iconCustom = false,
   }) async {
     await supabase
         .from('pockets')
-        .update({'name': name, 'is_savings': isSavings})
+        .update({
+          'name': name,
+          'is_savings': isSavings,
+          'icon_key': iconKey,
+          'icon_custom': iconCustom,
+        })
         .eq('id', pocketId);
   }
 

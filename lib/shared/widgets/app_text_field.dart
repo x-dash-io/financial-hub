@@ -16,6 +16,11 @@ class AppTextField extends StatelessWidget {
     this.style,
     this.autofocus = false,
     this.enabled = true,
+    this.readOnly = false,
+    this.showCursor,
+    this.onTap,
+    this.focusNode,
+    this.enableInteractiveSelection = true,
   }) : assert(
          controller == null || initialValue == null,
          'Use either controller or initialValue, not both.',
@@ -34,6 +39,11 @@ class AppTextField extends StatelessWidget {
   final TextStyle? style;
   final bool autofocus;
   final bool enabled;
+  final bool readOnly;
+  final bool? showCursor;
+  final VoidCallback? onTap;
+  final FocusNode? focusNode;
+  final bool enableInteractiveSelection;
 
   @override
   Widget build(BuildContext context) {
@@ -45,6 +55,11 @@ class AppTextField extends StatelessWidget {
       validator: validator,
       autofocus: autofocus,
       enabled: enabled,
+      readOnly: readOnly,
+      showCursor: showCursor,
+      onTap: onTap,
+      focusNode: focusNode,
+      enableInteractiveSelection: enableInteractiveSelection,
       textAlign: textAlign,
       style: style,
       decoration: InputDecoration(
