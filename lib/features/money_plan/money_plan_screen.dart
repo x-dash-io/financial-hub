@@ -315,6 +315,22 @@ class _MoneyPlanScreenState extends State<MoneyPlanScreen> {
     });
   }
 
+  Future<void> _editPocketPercentage(int index) async {
+    if (_saving) return;
+    final pocket = _pockets[index];
+    final selected = await showModalBottomSheet<int>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => _PercentageKeypadSheet(initialValue: pocket.percentage),
+    );
+
+    if (!mounted || selected == null) return;
+    setState(() {
+      pocket.percentage = selected.clamp(0, 100);
+    });
+  }
+
   void _onPocketNameChanged(EditablePocketDraft pocket, String value) {
     setState(() {
       pocket.name = value;
@@ -757,13 +773,17 @@ class _MoneyPlanScreenState extends State<MoneyPlanScreen> {
                         AppTextField(
                           key: ValueKey('pct-${pocket.id ?? index}'),
                           initialValue: '${pocket.percentage}',
-                          keyboardType: TextInputType.number,
                           label: 'Allocation %',
+                          readOnly: true,
+                          showCursor: false,
+                          onTap: _saving
+                              ? null
+                              : () => _editPocketPercentage(index),
                           prefixIcon: const Icon(LucideIcons.percent, size: 18),
-                          onChanged: (v) {
-                            final parsed = int.tryParse(v.trim()) ?? 0;
-                            setState(() => pocket.percentage = parsed);
-                          },
+                          suffixIcon: const Icon(
+                            LucideIcons.chevronDown,
+                            size: 16,
+                          ),
                         ),
                         if (pocket.balance != 0) ...[
                           const SizedBox(height: AppSpacing.x1),
@@ -1045,5 +1065,205 @@ class _AllocationDonutPainter extends CustomPainter {
       }
     }
     return false;
+  }
+}
+
+class _PercentageKeypadSheet extends StatefulWidget {
+  const _PercentageKeypadSheet({required this.initialValue});
+
+  final int initialValue;
+
+  @override
+  State<_PercentageKeypadSheet> createState() => _PercentageKeypadSheetState();
+}
+
+class _PercentageKeypadSheetState extends State<_PercentageKeypadSheet> {
+  late String _text;
+
+  int get _value => int.tryParse(_text) ?? 0;
+
+  @override
+  void initState() {
+    super.initState();
+    final safe = widget.initialValue.clamp(0, 100);
+    _text = safe == 0 ? '' : '$safe';
+  }
+
+  void _append(String digit) {
+    if (_text.length >= 3) return;
+    final next = _text == '0' ? digit : '$_text$digit';
+    final parsed = int.tryParse(next);
+    if (parsed == null || parsed > 100) return;
+    setState(() => _text = next);
+  }
+
+  void _clear() {
+    if (_text.isEmpty) return;
+    setState(() => _text = '');
+  }
+
+  void _backspace() {
+    if (_text.isEmpty) return;
+    setState(() => _text = _text.substring(0, _text.length - 1));
+  }
+
+  void _apply() {
+    Navigator.of(context).pop(_value.clamp(0, 100));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: AppSpacing.sheet,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Set allocation percentage',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: AppSpacing.x0_5),
+            Text(
+              'Use in-app keypad (0-100).',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: AppSpacing.x2),
+            AppCard(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.x2),
+              softShadow: true,
+              child: Center(
+                child: Text(
+                  '${_value.clamp(0, 100)}%',
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.6,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.x1),
+            for (final row in const [
+              ['1', '2', '3'],
+              ['4', '5', '6'],
+              ['7', '8', '9'],
+            ]) ...[
+              Row(
+                children: [
+                  for (final key in row)
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.all(AppSpacing.x0_5),
+                        child: _PercentKeyButton(
+                          label: key,
+                          onTap: () => _append(key),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+            Row(
+              children: [
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.x0_5),
+                    child: _PercentKeyButton(
+                      label: 'C',
+                      destructive: true,
+                      onTap: _clear,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.x0_5),
+                    child: _PercentKeyButton(
+                      label: '0',
+                      onTap: () => _append('0'),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.x0_5),
+                    child: _PercentKeyButton(
+                      icon: LucideIcons.delete,
+                      onTap: _backspace,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.x2),
+            Row(
+              children: [
+                Expanded(
+                  child: SecondaryButton(
+                    label: 'Cancel',
+                    icon: LucideIcons.x,
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.x1),
+                Expanded(
+                  child: PrimaryButton(
+                    label: 'Apply',
+                    icon: LucideIcons.check,
+                    onPressed: _apply,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PercentKeyButton extends StatelessWidget {
+  const _PercentKeyButton({
+    this.label,
+    this.icon,
+    required this.onTap,
+    this.destructive = false,
+  });
+
+  final String? label;
+  final IconData? icon;
+  final VoidCallback onTap;
+  final bool destructive;
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = destructive ? AppColors.accentRed : AppColors.textPrimary;
+    return Material(
+      color: AppColors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Ink(
+          height: 52,
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.borderMuted),
+          ),
+          child: Center(
+            child: label != null
+                ? Text(
+                    label!,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.titleLarge?.copyWith(color: fg),
+                  )
+                : Icon(icon, color: fg, size: 20),
+          ),
+        ),
+      ),
+    );
   }
 }
