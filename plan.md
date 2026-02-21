@@ -1,97 +1,111 @@
-# Financial Hub – Build Plan
+# Financial Hub - Build Plan (Status Updated)
 
-## Phase 0: Project Setup (Week 1)
+Last updated: 2026-02-21
 
-- Initialize Flutter project with Android-only configuration
-- Add Supabase Flutter SDK and configure project
-- Set up folder structure: `lib/core`, `lib/features`, `lib/shared`
-- Configure environment (dev/staging keys)
-- Set up basic CI (e.g., GitHub Actions) for lint and tests
+## Snapshot
 
-## Phase 1: Backend Foundation (Week 1–2)
+### Implemented
+- Project scaffolding, folder structure, `.env` setup, and CI (`flutter analyze` + `flutter test`)
+- Supabase schema migrations for profiles, plans, pockets, allocations, transactions, behavioral events
+- RLS policies and default plan seeding migrations
+- Onboarding flow (3 screens, skippable) with SMS permission request
+- Session/bootstrap auth flow (MVP anonymous session + phone capture)
+- Money plan management (create, update, activate, delete) with validation
+- Pockets dashboard with category cards and savings lock indicator
+- Allocation engine (integer math, remainder to savings) + transaction-based ledger writes
+- SMS listener/parser for strict `MPESA` sender matching and parsed allocation trigger
+- Simulate income flow with upgraded allocation result UI and "View pockets" CTA
+- Spending flow with savings lock, insufficient-balance checks, behavioral logging
+- Reallocation flow with friction countdown, confirmation, and behavioral logging
+- Basic behavior report screen
+- Reallocation duplicate-key crash fix
+- Debug banner removed (`debugShowCheckedModeBanner: false`)
 
-**Supabase setup**
+### In Progress
+- Replace MVP anonymous auth with full Supabase phone OTP auth flow
+- Ensure real SMS-triggered allocations always show a post-allocation result screen (not only snackbar/dashboard refresh)
+- Broader product polish and consistency hardening across all interaction states
 
-- Create Supabase project; enable Auth (phone OTP)
-- Create schema and migrations in Supabase:
-  - `profiles` (user_id FK to auth.users)
-  - `pockets` (profile_id, name, balance, is_savings)
-  - `money_plans` (profile_id, name, is_active)
-  - `money_plan_allocations` (plan_id, pocket_id, percentage)
-  - `transactions` (pocket_id, amount, type, reference, created_at)
-  - `behavioral_events` (profile_id, event_type, payload JSON, created_at)
-- Apply basic RLS policies (all tables scoped by auth.uid via profiles)
-- Seed default money plan template
+### Not Started
+- End-to-end integration/UI tests for complete user journeys
+- Android performance profiling/tuning pass
+- MVP expansion items from PRD section 4 (duplicate detection, server-side/edge validation, behavioral scoring, push notifications)
 
-## Phase 2: Auth and Onboarding (Week 2–3)
+## Phase Status
 
-- Implement 3-screen intro (skippable) using PageView
-- Request and handle `READ_SMS` permission with clear explanation
-- Implement phone OTP auth via Supabase Auth
-- Create profile and default money plan on first sign-in
-- Persist onboarding completion
+## Phase 0: Project Setup
+Status: Completed
+- [x] Initialize Flutter project (Android-first)
+- [x] Add Supabase Flutter SDK and basic configuration
+- [x] Set up folders (`core`, `features`, `shared`)
+- [x] Configure local environment keys
+- [x] Add basic CI workflow
 
-## Phase 3: Money Plan and Pockets (Week 3–4)
+## Phase 1: Backend Foundation
+Status: Completed (app-side)
+- [x] Create schema and migrations
+- [x] Apply baseline RLS policies
+- [x] Seed default plan and default pockets
+- [x] Add ledger balance trigger model (`cached_balance` maintained from transactions)
+- [ ] Supabase console-level auth provider configuration verification checklist
 
-- Money plan CRUD with validation: percentages sum to 100%, Savings ≥ 10%
-- Default categories: Savings (locked), plus 2–3 spendable pockets
-- Pockets dashboard UI: card-based, category balances, Savings visually distinct
-- Minimize total balance emphasis per UX principles
+## Phase 2: Auth and Onboarding
+Status: In Progress
+- [x] 3-screen intro with skip
+- [x] SMS permission request path
+- [x] Persist onboarding completion
+- [x] Create/ensure profile + default plan bootstrap
+- [ ] Phone OTP auth (currently MVP anonymous session + phone capture)
 
-## Phase 4: Allocation Engine (Week 4–5)
+## Phase 3: Money Plan and Pockets
+Status: Completed
+- [x] Money plan CRUD with validation (100% total, savings floor, naming checks)
+- [x] Default categories with locked savings
+- [x] Pockets dashboard (card-based, category-first presentation)
+- [x] Keep total-balance emphasis low
 
-- Implement allocation logic in Dart: integer math, `floor(income × pct / 100)`, remainder → Savings
-- Integrate with Supabase: create transactions per pocket, update balances
-- Allocation triggered only after successful income parsing (no lump sum shown first)
+## Phase 4: Allocation Engine
+Status: Completed
+- [x] Integer allocation math and remainder-to-savings rule
+- [x] Persist allocation through transaction inserts
+- [x] Trigger/derived balance model via DB trigger
+- [x] Category-first post-allocation UX in simulate flow
 
-## Phase 5: SMS Income Detection (Week 5–6)
+## Phase 5: SMS Income Detection
+Status: In Progress
+- [x] SMS receiver with strict sender filter (`MPESA` only)
+- [x] Parser for amount/reference + timestamp handling
+- [x] Parse success triggers allocation
+- [x] Simulate income fallback
+- [x] Do not persist raw SMS body
+- [ ] Dedicated post-allocation breakdown screen for real incoming SMS events
 
-- Register SMS receiver (BroadcastReceiver) for MPESA messages only (sender = "MPESA"; reject M-PESA and other variants to prevent fraud)
-- Implement regex parser for amount, date, reference
-- On parse success: run allocation engine, show post-allocation breakdown
-- Add "Simulate income" button for manual testing and fallback
-- Do not persist raw SMS; parse in-memory only
+## Phase 6: Spending and Validation
+Status: Completed
+- [x] Spend UI and pocket selection
+- [x] Reject spend from savings
+- [x] Reject insufficient balance
+- [x] Record debit transactions
+- [x] Log behavioral events for attempts and valid spends
 
-## Phase 6: Spending and Validation (Week 6–7)
+## Phase 7: Manual Reallocation with Friction
+Status: Completed
+- [x] Source/destination pocket flow
+- [x] Friction timer and confirmation gating
+- [x] Reallocation ledger writes
+- [x] Behavioral event logging
 
-- Spending UI: select pocket, enter amount
-- Client-side checks: reject insufficient balance, reject spend from Savings
-- Create debit transaction; log overspend/withdrawal attempts in `behavioral_events`
-- Update pocket balance via Supabase
+## Phase 8: Polish and Validation
+Status: In Progress
+- [x] Basic behavior report screen
+- [x] Core unit/widget tests for parser/allocation/money-plan/reallocation-key regression
+- [ ] Full end-to-end flow testing
+- [ ] Performance pass for Android
+- [ ] Final UX polish review against PRD copy/interaction standards
 
-## Phase 7: Manual Reallocation with Friction (Week 7–8)
+## Next Priority Queue
 
-- Reallocation flow: source pocket → destination pocket
-- Warning modal with 5–10 second delay, confirmation step
-- Enforce Savings minimum; block reallocating below 10% of plan
-- Log reallocation in `behavioral_events`
-
-## Phase 8: Polish and Validation (Week 8–9)
-
-- Behavioral logging completeness check
-- UI polish: clean, minimal, subtle depth
-- Basic impact/behavior report (e.g., overspend count, reallocation count)
-- End-to-end testing of core flows
-- Performance pass for Android
-
-## Key Files Structure
-
-```
-lib/
-├── main.dart
-├── core/
-│   ├── allocation_engine.dart
-│   ├── sms_parser.dart
-│   └── supabase_client.dart
-├── features/
-│   ├── onboarding/
-│   ├── auth/
-│   ├── money_plan/
-│   ├── pockets/
-│   ├── allocation/
-│   ├── spending/
-│   └── reallocation/
-└── shared/
-    ├── models/
-    └── widgets/
-```
+1. Implement Supabase phone OTP auth and remove anonymous session fallback.
+2. Add a reusable allocation-result route for both simulated and SMS-triggered income events.
+3. Add e2e tests for onboarding/auth -> allocation -> spend/reallocate -> report flow.
+4. Run Android performance and startup profiling, then apply targeted optimizations.

@@ -1,5 +1,7 @@
 # Supabase Setup
 
+Project repository: https://github.com/x-dash-io/Financial-Hub.git
+
 1. Create a project at https://supabase.com
 2. Enable Phone Auth in Authentication > Providers
 3. Run migrations in order:

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:financial_hub/shared/theme/app_colors.dart';
 import 'package:financial_hub/shared/theme/app_radius.dart';
 import 'package:financial_hub/shared/theme/app_spacing.dart';
 
@@ -47,17 +48,17 @@ class AppBottomNav extends StatelessWidget {
         ),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.96),
+            color: AppColors.surface.withValues(alpha: 0.96),
             borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: const Color(0xFFDFE9F2)),
+            border: Border.all(color: AppColors.borderMuted),
             boxShadow: const [
               BoxShadow(
-                color: Color(0x1F0F1C2C),
+                color: AppColors.shadowNavStrong,
                 blurRadius: 28,
                 offset: Offset(0, 14),
               ),
               BoxShadow(
-                color: Color(0x140F1C2C),
+                color: AppColors.shadowNavSoft,
                 blurRadius: 10,
                 offset: Offset(0, 4),
               ),
@@ -112,7 +113,7 @@ class _NavItem extends StatelessWidget {
         : Theme.of(context).colorScheme.onSurfaceVariant;
 
     return Material(
-      color: Colors.transparent,
+      color: AppColors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(AppRadius.button),
         onTap: onTap,
@@ -122,11 +123,11 @@ class _NavItem extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: AppSpacing.x1),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(AppRadius.button),
-            color: selected ? selectedBg : Colors.transparent,
+            color: selected ? selectedBg : AppColors.transparent,
             boxShadow: selected
                 ? const [
                     BoxShadow(
-                      color: Color(0x12000000),
+                      color: AppColors.shadowSelected,
                       blurRadius: 8,
                       offset: Offset(0, 3),
                     ),

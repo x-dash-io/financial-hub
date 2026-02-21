@@ -64,6 +64,16 @@ class _AuthGateState extends State<AuthGate> {
     setState(() => _onboardingComplete = true);
   }
 
+  Future<void> _goBackToOnboarding() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(AppStateKeys.onboardingComplete, false);
+    if (!mounted) return;
+    setState(() {
+      _onboardingComplete = false;
+      _bootstrapError = null;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_checking) {
@@ -79,6 +89,7 @@ class _AuthGateState extends State<AuthGate> {
       return AuthScreen(
         onSuccess: () => _loadState(),
         initialError: _bootstrapError,
+        onBackToOnboarding: _goBackToOnboarding,
       );
     }
     return PocketsScreen(

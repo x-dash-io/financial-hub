@@ -35,7 +35,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     _OnboardingPage(
       title: 'Keep Savings Protected',
       description:
-          'Savings stays locked by default while spendable pockets stay flexible.',
+          'Savings is always locked from direct spending and reallocation. Keep at least 10%, and change the percentage anytime in Money Plan.',
       icon: LucideIcons.shieldCheck,
       accent: AppColors.primary,
     ),
@@ -89,7 +89,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       backgroundGradient: const LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: [Color(0xFFF9FBFF), Color(0xFFF1F6FB)],
+        colors: [
+          AppColors.onboardingGradientStart,
+          AppColors.onboardingGradientEnd,
+        ],
       ),
       body: Padding(
         padding: AppSpacing.page,
@@ -156,7 +159,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   margin: const EdgeInsets.symmetric(horizontal: 4),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(999),
-                    color: selected ? page.accent : const Color(0xFFC9D5E3),
+                    color: selected
+                        ? page.accent
+                        : AppColors.onboardingIndicatorInactive,
                   ),
                 );
               }),
@@ -215,7 +220,7 @@ class _IllustrationPlaceholder extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [accent.withValues(alpha: 0.14), Colors.white],
+          colors: [accent.withValues(alpha: 0.14), AppColors.surface],
         ),
         border: Border.all(color: accent.withValues(alpha: 0.22)),
         boxShadow: AppShadows.card,
@@ -255,7 +260,7 @@ class _IllustrationPlaceholder extends StatelessWidget {
               height: 112,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white,
+                color: AppColors.surface,
                 border: Border.all(color: accent.withValues(alpha: 0.3)),
                 boxShadow: [
                   BoxShadow(
@@ -275,7 +280,7 @@ class _IllustrationPlaceholder extends StatelessWidget {
                 textAlign: TextAlign.right,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w700,
-                  color: const Color(0xFF7B8BA0),
+                  color: AppColors.helperTextMuted,
                 ),
               ),
             ),
@@ -316,7 +321,7 @@ class _PrivacyNoteCard extends StatelessWidget {
       width: double.infinity,
       padding: AppSpacing.card,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.button),
         border: Border.all(color: accent.withValues(alpha: 0.26)),
       ),

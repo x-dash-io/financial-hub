@@ -420,6 +420,13 @@ class _MoneyPlanScreenState extends State<MoneyPlanScreen> {
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: AppSpacing.x2),
+                const WarningCard(
+                  title: 'Savings rule',
+                  message:
+                      'Savings must be at least 10%. It stays locked with no expiry timer, but you can change the savings percentage anytime here.',
+                  type: WarningCardType.info,
+                ),
+                const SizedBox(height: AppSpacing.x2),
                 ..._pockets.asMap().entries.map((entry) {
                   final index = entry.key;
                   final pocket = entry.value;

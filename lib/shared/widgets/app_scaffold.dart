@@ -30,7 +30,7 @@ class AppScaffold extends StatelessWidget {
             const LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [Color(0xFFF8FAFC), AppColors.background],
+              colors: [AppColors.backgroundTop, AppColors.background],
             ),
       ),
       child: safeArea ? SafeArea(child: body) : body,

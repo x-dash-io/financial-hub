@@ -44,8 +44,8 @@ class PrimaryButton extends StatelessWidget {
     final button = FilledButton(
       onPressed: disabled ? null : onPressed,
       style: FilledButton.styleFrom(
-        backgroundColor: gradient ? Colors.transparent : AppColors.primary,
-        shadowColor: Colors.transparent,
+        backgroundColor: gradient ? AppColors.transparent : AppColors.primary,
+        shadowColor: AppColors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.button),
         ),
@@ -59,7 +59,10 @@ class PrimaryButton extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: disabled
             ? const LinearGradient(
-                colors: [Color(0xFFB5BFC8), Color(0xFFA3AFBA)],
+                colors: [
+                  AppColors.disabledGradientStart,
+                  AppColors.disabledGradientEnd,
+                ],
               )
             : AppColors.primaryButtonGradient,
         borderRadius: BorderRadius.circular(AppRadius.button),

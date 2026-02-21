@@ -126,11 +126,11 @@ class _SimulateIncomeSheetState extends State<SimulateIncomeSheet>
       padding: AppSpacing.card,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppRadius.card),
-        border: Border.all(color: const Color(0xFFBEE6D3)),
+        border: Border.all(color: AppColors.primarySoftBorder),
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFFE8F8F1), Colors.white],
+          colors: [AppColors.primarySoftTint, AppColors.surface],
         ),
       ),
       child: Row(
@@ -168,7 +168,7 @@ class _SimulateIncomeSheetState extends State<SimulateIncomeSheet>
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: AppColors.primarySoft,
-              border: Border.all(color: const Color(0xFFBEE6D3)),
+              border: Border.all(color: AppColors.primarySoftBorder),
             ),
             child: const Icon(
               LucideIcons.check,
@@ -312,7 +312,7 @@ class _SimulateIncomeSheetState extends State<SimulateIncomeSheet>
                   const SizedBox(height: AppSpacing.x1),
                   if (breakdown == null) ...[
                     Text(
-                      'Enter amount to allocate to your pockets. Remainder goes to Savings.',
+                      'Enter amount to allocate to your pockets. Remainder goes to Savings (locked).',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                     const SizedBox(height: AppSpacing.x2),

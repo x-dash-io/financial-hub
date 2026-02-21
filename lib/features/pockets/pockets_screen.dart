@@ -236,33 +236,40 @@ class _PocketsScreenState extends State<PocketsScreen> {
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: _loadPockets,
-                  child: ListView.builder(
+                  child: ListView(
                     padding: AppSpacing.page,
-                    itemCount: _pockets.length,
-                    itemBuilder: (context, i) {
-                      final pocket = _pockets[i];
-                      final progress = totalBalance <= 0
-                          ? 0.0
-                          : pocket.balance / totalBalance;
-                      return PocketCard(
-                        name: pocket.name,
-                        balance: pocket.balance,
-                        progress: progress,
-                        locked: pocket.isSavings,
-                        onTap: _profileId == null
-                            ? null
-                            : () => showModalBottomSheet(
-                                context: context,
-                                isScrollControlled: true,
-                                builder: (_) => SpendSheet(
-                                  pockets: _pockets,
-                                  initialPocketId: pocket.id,
-                                  profileId: _profileId!,
-                                  onSpent: _loadPockets,
+                    children: [
+                      const WarningCard(
+                        title: 'Simple flow',
+                        message:
+                            'Tap a pocket to spend, use Reallocate for transfers, and Simulate to test income. Savings stays locked and must remain at least 10%.',
+                        type: WarningCardType.info,
+                      ),
+                      const SizedBox(height: AppSpacing.x2),
+                      ..._pockets.map((pocket) {
+                        final progress = totalBalance <= 0
+                            ? 0.0
+                            : pocket.balance / totalBalance;
+                        return PocketCard(
+                          name: pocket.name,
+                          balance: pocket.balance,
+                          progress: progress,
+                          locked: pocket.isSavings,
+                          onTap: _profileId == null
+                              ? null
+                              : () => showModalBottomSheet(
+                                  context: context,
+                                  isScrollControlled: true,
+                                  builder: (_) => SpendSheet(
+                                    pockets: _pockets,
+                                    initialPocketId: pocket.id,
+                                    profileId: _profileId!,
+                                    onSpent: _loadPockets,
+                                  ),
                                 ),
-                              ),
-                      );
-                    },
+                        );
+                      }),
+                    ],
                   ),
                 ),
               ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:financial_hub/shared/theme/app_colors.dart';
 import 'package:financial_hub/shared/theme/app_radius.dart';
 import 'package:financial_hub/shared/theme/app_spacing.dart';
 
@@ -25,7 +26,7 @@ class WarningCard extends StatelessWidget {
     final (bg, fg, icon) = switch (type) {
       WarningCardType.warning => (
         theme.colorScheme.errorContainer.withValues(alpha: 0.42),
-        const Color(0xFF8C5A00),
+        AppColors.warningDeep,
         LucideIcons.alertTriangle,
       ),
       WarningCardType.error => (

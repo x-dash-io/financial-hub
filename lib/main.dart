@@ -19,6 +19,7 @@ class FinancialHubApp extends StatelessWidget {
     return MaterialApp(
       title: 'Financial Hub',
       theme: AppTheme.light,
+      debugShowCheckedModeBanner: false,
       home: const AuthGate(),
     );
   }

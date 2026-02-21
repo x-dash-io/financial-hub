@@ -24,8 +24,8 @@ class GradientButton extends StatelessWidget {
       child: FilledButton(
         onPressed: onPressed,
         style: FilledButton.styleFrom(
-          backgroundColor: Colors.transparent,
-          shadowColor: Colors.transparent,
+          backgroundColor: AppColors.transparent,
+          shadowColor: AppColors.transparent,
           minimumSize: Size.fromHeight(height),
         ),
         child: child,

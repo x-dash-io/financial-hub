@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:financial_hub/shared/theme/app_radius.dart';
+import 'package:financial_hub/shared/theme/app_shadows.dart';
 import 'package:financial_hub/shared/theme/app_spacing.dart';
 import 'package:financial_hub/shared/theme/app_colors.dart';
 
@@ -26,15 +27,15 @@ class PocketCard extends StatelessWidget {
     final icon = _iconForName(name, locked);
     final accent = _iconColorForName(name, locked);
     final progressValue = progress.clamp(0.0, 1.0);
-    final cardTint = locked ? const Color(0xFFF2FAF7) : Colors.white;
+    final cardTint = locked ? AppColors.savingsCardTint : AppColors.surface;
     final borderColor = locked
-        ? const Color(0xFFC8EAD8)
-        : const Color(0xFFDEE8F1);
+        ? AppColors.savingsCardBorder
+        : AppColors.pocketCardBorder;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.x2),
       child: Material(
-        color: Colors.transparent,
+        color: AppColors.transparent,
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(AppRadius.card),
@@ -43,18 +44,7 @@ class PocketCard extends StatelessWidget {
               color: cardTint,
               borderRadius: BorderRadius.circular(AppRadius.card),
               border: Border.all(color: borderColor),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x1A0F1C2C),
-                  blurRadius: 26,
-                  offset: Offset(0, 12),
-                ),
-                BoxShadow(
-                  color: Color(0x120F1C2C),
-                  blurRadius: 8,
-                  offset: Offset(0, 3),
-                ),
-              ],
+              boxShadow: AppShadows.card,
             ),
             child: Padding(
               padding: AppSpacing.card,
@@ -94,7 +84,7 @@ class PocketCard extends StatelessWidget {
                                       vertical: AppSpacing.x0_5,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFCFF0E3),
+                                      color: AppColors.savingsBadge,
                                       borderRadius: BorderRadius.circular(
                                         AppRadius.chip,
                                       ),
@@ -105,14 +95,14 @@ class PocketCard extends StatelessWidget {
                                         const Icon(
                                           LucideIcons.lock,
                                           size: 12,
-                                          color: Color(0xFF0C6655),
+                                          color: AppColors.primaryDeep,
                                         ),
                                         const SizedBox(width: AppSpacing.x0_5),
                                         Text(
                                           'Locked',
                                           style: theme.textTheme.bodyMedium
                                               ?.copyWith(
-                                                color: const Color(0xFF0C6655),
+                                                color: AppColors.primaryDeep,
                                                 fontWeight: FontWeight.w700,
                                               ),
                                         ),
@@ -199,7 +189,7 @@ class PocketCard extends StatelessWidget {
       return AppColors.accentViolet;
     }
     if (lower.contains('shopping')) return AppColors.accentRed;
-    return const Color(0xFF0F766E);
+    return AppColors.accentTeal;
   }
 }
 

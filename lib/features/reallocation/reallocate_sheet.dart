@@ -150,7 +150,7 @@ class _ReallocateSheetState extends State<ReallocateSheet> {
     if (savings == null) {
       return 'Savings pocket is not configured.';
     }
-    return 'Savings remains protected at KES ${savings.balance}. Reallocation only moves spendable pockets.';
+    return 'Savings remains protected at KES ${savings.balance}. Savings stays locked (no time expiry); keep at least 10% in Money Plan and adjust that percentage there anytime.';
   }
 
   @override

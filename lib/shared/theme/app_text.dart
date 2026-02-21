@@ -58,7 +58,7 @@ class AppText {
         fontSize: 15,
         fontWeight: FontWeight.w700,
         letterSpacing: 0.1,
-        color: Colors.white,
+        color: AppColors.onPrimary,
       ),
     );
 

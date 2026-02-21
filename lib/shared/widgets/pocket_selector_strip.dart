@@ -108,7 +108,7 @@ class _PocketSelectorTile extends StatelessWidget {
     return Opacity(
       opacity: disabled ? 0.72 : 1,
       child: Material(
-        color: Colors.transparent,
+        color: AppColors.transparent,
         child: InkWell(
           onTap: disabled ? null : onTap,
           borderRadius: BorderRadius.circular(radius),
