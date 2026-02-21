@@ -6,6 +6,7 @@ import 'package:financial_hub/core/app_logger.dart';
 import 'package:financial_hub/features/behavior/behavior_report_screen.dart';
 import 'package:financial_hub/features/money_plan/money_plan_service.dart';
 import 'package:financial_hub/shared/pockets/pocket_icon_catalog.dart';
+import 'package:financial_hub/shared/theme/app_radius.dart';
 import 'package:financial_hub/shared/theme/app_spacing.dart';
 import 'package:financial_hub/shared/theme/app_colors.dart';
 import 'package:financial_hub/shared/widgets/app_bottom_nav.dart';
@@ -159,36 +160,10 @@ class _MoneyPlanScreenState extends State<MoneyPlanScreen> {
   Future<void> _createPlan() async {
     if (_editor == null) return;
 
-    final nameController = TextEditingController(text: 'New Plan');
     final newPlanName = await showDialog<String>(
       context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: const Text('Create Plan'),
-          content: AppTextField(
-            controller: nameController,
-            label: 'Plan name',
-            hint: 'Starter Plan',
-            prefixIcon: const Icon(LucideIcons.pencil, size: 18),
-            autofocus: true,
-          ),
-          actions: [
-            SecondaryButton(
-              label: 'Cancel',
-              icon: LucideIcons.x,
-              onPressed: () => Navigator.of(ctx).pop(),
-            ),
-            PrimaryButton(
-              label: 'Create',
-              icon: LucideIcons.plus,
-              onPressed: () =>
-                  Navigator.of(ctx).pop(nameController.text.trim()),
-            ),
-          ],
-        );
-      },
+      builder: (_) => const _CreatePlanDialog(initialName: 'New Plan'),
     );
-    nameController.dispose();
 
     if (newPlanName == null || newPlanName.isEmpty) return;
 
@@ -245,22 +220,15 @@ class _MoneyPlanScreenState extends State<MoneyPlanScreen> {
     final confirmed =
         await showDialog<bool>(
           context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Delete Plan'),
-            content: const Text('Delete this plan? This cannot be undone.'),
-            actions: [
-              SecondaryButton(
-                label: 'Cancel',
-                icon: LucideIcons.x,
-                onPressed: () => Navigator.of(ctx).pop(false),
-              ),
-              PrimaryButton(
-                label: 'Delete',
-                icon: LucideIcons.trash2,
-                gradient: false,
-                onPressed: () => Navigator.of(ctx).pop(true),
-              ),
-            ],
+          builder: (_) => const _PlanConfirmDialog(
+            title: 'Delete Plan',
+            message: 'Delete this plan permanently? This cannot be undone.',
+            icon: LucideIcons.alertTriangle,
+            iconColor: AppColors.accentRed,
+            cancelLabel: 'Cancel',
+            confirmLabel: 'Delete',
+            confirmIcon: LucideIcons.trash2,
+            confirmGradient: false,
           ),
         ) ??
         false;
@@ -350,6 +318,7 @@ class _MoneyPlanScreenState extends State<MoneyPlanScreen> {
     final selected = await showModalBottomSheet<String>(
       context: context,
       showDragHandle: true,
+      backgroundColor: AppColors.background,
       builder: (ctx) {
         final options = PocketIconCatalog.optionsForPicker(isSavings: false);
         final inferred = PocketIconCatalog.inferKey(
@@ -357,88 +326,115 @@ class _MoneyPlanScreenState extends State<MoneyPlanScreen> {
           isSavings: false,
         );
         final inferredMeta = PocketIconCatalog.byKey(inferred);
+        final gridHeight = math.max(
+          220.0,
+          math.min(340.0, MediaQuery.sizeOf(ctx).height * 0.44),
+        );
 
         return SafeArea(
           top: false,
-          child: Padding(
-            padding: AppSpacing.sheet,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Choose pocket icon',
-                  style: Theme.of(ctx).textTheme.titleLarge,
-                ),
-                const SizedBox(height: AppSpacing.x1),
-                Text(
-                  'Pick custom or keep Auto match by pocket name.',
-                  style: Theme.of(ctx).textTheme.bodyMedium,
-                ),
-                const SizedBox(height: AppSpacing.x2),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(inferredMeta.icon, color: inferredMeta.color),
-                  title: const Text('Auto match'),
-                  subtitle: Text('Suggested: ${inferredMeta.label}'),
-                  trailing: !pocket.iconCustom
-                      ? const Icon(LucideIcons.check, color: AppColors.primary)
-                      : null,
-                  onTap: () => Navigator.of(ctx).pop(_autoIconSentinel),
-                ),
-                const SizedBox(height: AppSpacing.x1),
-                SizedBox(
-                  height: 300,
-                  child: GridView.builder(
-                    itemCount: options.length,
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          mainAxisSpacing: AppSpacing.x1,
-                          crossAxisSpacing: AppSpacing.x1,
-                          childAspectRatio: 1.2,
+          child: ColoredBox(
+            color: AppColors.background,
+            child: Padding(
+              padding: AppSpacing.sheet,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: double.infinity,
+                    padding: AppSpacing.card,
+                    decoration: BoxDecoration(
+                      color: AppColors.background,
+                      borderRadius: BorderRadius.circular(AppRadius.card),
+                      border: Border.all(color: AppColors.borderMuted),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Choose pocket icon',
+                          style: Theme.of(ctx).textTheme.titleLarge,
                         ),
-                    itemBuilder: (context, i) {
-                      final option = options[i];
-                      final selectedNow =
-                          pocket.iconCustom && pocket.iconKey == option.key;
-                      return InkWell(
-                        borderRadius: BorderRadius.circular(14),
-                        onTap: () => Navigator.of(ctx).pop(option.key),
-                        child: Ink(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(
-                              color: selectedNow
-                                  ? option.color
-                                  : AppColors.borderMuted,
-                            ),
-                            color: selectedNow
-                                ? option.color.withValues(alpha: 0.12)
-                                : AppColors.surface,
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(AppSpacing.x1),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(option.icon, color: option.color),
-                                const SizedBox(height: AppSpacing.x0_5),
-                                Text(
-                                  option.label,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(ctx).textTheme.bodyMedium,
-                                ),
-                              ],
-                            ),
-                          ),
+                        const SizedBox(height: AppSpacing.x1),
+                        Text(
+                          'Pick custom or keep Auto match by pocket name.',
+                          style: Theme.of(ctx).textTheme.bodyMedium,
                         ),
-                      );
-                    },
+                        const SizedBox(height: AppSpacing.x1),
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: Icon(
+                            inferredMeta.icon,
+                            color: inferredMeta.color,
+                          ),
+                          title: const Text('Auto match'),
+                          subtitle: Text('Suggested: ${inferredMeta.label}'),
+                          trailing: !pocket.iconCustom
+                              ? const Icon(
+                                  LucideIcons.check,
+                                  color: AppColors.primary,
+                                )
+                              : null,
+                          onTap: () => Navigator.of(ctx).pop(_autoIconSentinel),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: AppSpacing.x1),
+                  SizedBox(
+                    height: gridHeight,
+                    child: GridView.builder(
+                      itemCount: options.length,
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 3,
+                            mainAxisSpacing: AppSpacing.x1,
+                            crossAxisSpacing: AppSpacing.x1,
+                            childAspectRatio: 1.2,
+                          ),
+                      itemBuilder: (context, i) {
+                        final option = options[i];
+                        final selectedNow =
+                            pocket.iconCustom && pocket.iconKey == option.key;
+                        return InkWell(
+                          borderRadius: BorderRadius.circular(14),
+                          onTap: () => Navigator.of(ctx).pop(option.key),
+                          child: Ink(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: selectedNow
+                                    ? option.color
+                                    : AppColors.borderMuted,
+                              ),
+                              color: selectedNow
+                                  ? option.color.withValues(alpha: 0.12)
+                                  : AppColors.surface,
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(AppSpacing.x1),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(option.icon, color: option.color),
+                                  const SizedBox(height: AppSpacing.x0_5),
+                                  Text(
+                                    option.label,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(ctx).textTheme.bodyMedium,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -525,24 +521,16 @@ class _MoneyPlanScreenState extends State<MoneyPlanScreen> {
     final discard =
         await showDialog<bool>(
           context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Discard unsaved changes?'),
-            content: const Text(
-              'You have unsaved plan edits. Leave this screen and discard them?',
-            ),
-            actions: [
-              SecondaryButton(
-                label: 'Stay',
-                icon: LucideIcons.x,
-                onPressed: () => Navigator.of(ctx).pop(false),
-              ),
-              PrimaryButton(
-                label: 'Discard',
-                icon: LucideIcons.chevronRight,
-                gradient: false,
-                onPressed: () => Navigator.of(ctx).pop(true),
-              ),
-            ],
+          builder: (_) => const _PlanConfirmDialog(
+            title: 'Discard unsaved changes?',
+            message:
+                'You have unsaved plan edits. Leave this screen and discard them?',
+            icon: LucideIcons.info,
+            iconColor: AppColors.accentAmber,
+            cancelLabel: 'Stay',
+            confirmLabel: 'Discard',
+            confirmIcon: LucideIcons.chevronRight,
+            confirmGradient: false,
           ),
         ) ??
         false;
@@ -771,7 +759,11 @@ class _MoneyPlanScreenState extends State<MoneyPlanScreen> {
                           ),
                         const SizedBox(height: AppSpacing.x2),
                         AppTextField(
-                          key: ValueKey('pct-${pocket.id ?? index}'),
+                          // Include current percentage in key so read-only initialValue
+                          // refreshes after in-app keypad edits.
+                          key: ValueKey(
+                            'pct-${pocket.id ?? index}-${pocket.percentage}',
+                          ),
                           initialValue: '${pocket.percentage}',
                           label: 'Allocation %',
                           readOnly: true,
@@ -889,6 +881,171 @@ class _MoneyPlanScreenState extends State<MoneyPlanScreen> {
               color: AppColors.accentPurple,
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CreatePlanDialog extends StatefulWidget {
+  const _CreatePlanDialog({required this.initialName});
+
+  final String initialName;
+
+  @override
+  State<_CreatePlanDialog> createState() => _CreatePlanDialogState();
+}
+
+class _CreatePlanDialogState extends State<_CreatePlanDialog> {
+  late final TextEditingController _nameController;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.initialName);
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  void _close([String? value]) {
+    FocusManager.instance.primaryFocus?.unfocus();
+    Navigator.of(context).pop(value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      alignment: Alignment.bottomCenter,
+      backgroundColor: AppColors.transparent,
+      insetPadding: const EdgeInsets.fromLTRB(
+        AppSpacing.x3,
+        AppSpacing.x3,
+        AppSpacing.x3,
+        AppSpacing.x1,
+      ),
+      child: AppCard(
+        radius: AppRadius.sheet,
+        softShadow: true,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  const Icon(LucideIcons.sparkles, color: AppColors.primary),
+                  const SizedBox(width: AppSpacing.x1),
+                  Text(
+                    'Create Plan',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.x1),
+              Text(
+                'Create a new plan by cloning your current pocket structure.',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: AppSpacing.x2),
+              AppTextField(
+                controller: _nameController,
+                label: 'Plan name',
+                hint: 'Starter Plan',
+                prefixIcon: const Icon(LucideIcons.pencil, size: 18),
+                autofocus: true,
+              ),
+              const SizedBox(height: AppSpacing.x3),
+              SecondaryButton(
+                label: 'Cancel',
+                icon: LucideIcons.x,
+                onPressed: () => _close(),
+              ),
+              const SizedBox(height: AppSpacing.x1),
+              PrimaryButton(
+                label: 'Create',
+                icon: LucideIcons.plus,
+                onPressed: () => _close(_nameController.text.trim()),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PlanConfirmDialog extends StatelessWidget {
+  const _PlanConfirmDialog({
+    required this.title,
+    required this.message,
+    required this.icon,
+    required this.iconColor,
+    required this.cancelLabel,
+    required this.confirmLabel,
+    required this.confirmIcon,
+    this.confirmGradient = false,
+  });
+
+  final String title;
+  final String message;
+  final IconData icon;
+  final Color iconColor;
+  final String cancelLabel;
+  final String confirmLabel;
+  final IconData confirmIcon;
+  final bool confirmGradient;
+
+  void _close(BuildContext context, [bool value = false]) {
+    FocusManager.instance.primaryFocus?.unfocus();
+    Navigator.of(context).pop(value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: AppColors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.x3),
+      child: AppCard(
+        radius: AppRadius.sheet,
+        softShadow: true,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Icon(icon, color: iconColor),
+                  const SizedBox(width: AppSpacing.x1),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.x1),
+              Text(message, style: Theme.of(context).textTheme.bodyMedium),
+              const SizedBox(height: AppSpacing.x3),
+              SecondaryButton(
+                label: cancelLabel,
+                icon: LucideIcons.x,
+                onPressed: () => _close(context, false),
+              ),
+              const SizedBox(height: AppSpacing.x1),
+              PrimaryButton(
+                label: confirmLabel,
+                icon: confirmIcon,
+                gradient: confirmGradient,
+                onPressed: () => _close(context, true),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1116,108 +1273,113 @@ class _PercentageKeypadSheetState extends State<_PercentageKeypadSheet> {
     return SafeArea(
       top: false,
       child: Padding(
-        padding: AppSpacing.sheet,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Set allocation percentage',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: AppSpacing.x0_5),
-            Text(
-              'Use in-app keypad (0-100).',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: AppSpacing.x2),
-            AppCard(
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.x2),
-              softShadow: true,
-              child: Center(
-                child: Text(
-                  '${_value.clamp(0, 100)}%',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.6,
+        padding: AppSpacing.sheet.copyWith(
+          bottom:
+              AppSpacing.sheet.bottom + MediaQuery.viewInsetsOf(context).bottom,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Set allocation percentage',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: AppSpacing.x0_5),
+              Text(
+                'Use in-app keypad (0-100).',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: AppSpacing.x2),
+              AppCard(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.x2),
+                softShadow: true,
+                child: Center(
+                  child: Text(
+                    '${_value.clamp(0, 100)}%',
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.6,
+                    ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: AppSpacing.x1),
-            for (final row in const [
-              ['1', '2', '3'],
-              ['4', '5', '6'],
-              ['7', '8', '9'],
-            ]) ...[
-              Row(
-                children: [
-                  for (final key in row)
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.all(AppSpacing.x0_5),
-                        child: _PercentKeyButton(
-                          label: key,
-                          onTap: () => _append(key),
+              const SizedBox(height: AppSpacing.x1),
+              for (final row in const [
+                ['1', '2', '3'],
+                ['4', '5', '6'],
+                ['7', '8', '9'],
+              ]) ...[
+                Row(
+                  children: [
+                    for (final key in row)
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.all(AppSpacing.x0_5),
+                          child: _PercentKeyButton(
+                            label: key,
+                            onTap: () => _append(key),
+                          ),
                         ),
                       ),
+                  ],
+                ),
+              ],
+              Row(
+                children: [
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.x0_5),
+                      child: _PercentKeyButton(
+                        label: 'C',
+                        destructive: true,
+                        onTap: _clear,
+                      ),
                     ),
+                  ),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.x0_5),
+                      child: _PercentKeyButton(
+                        label: '0',
+                        onTap: () => _append('0'),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.x0_5),
+                      child: _PercentKeyButton(
+                        icon: LucideIcons.delete,
+                        onTap: _backspace,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.x2),
+              Row(
+                children: [
+                  Expanded(
+                    child: SecondaryButton(
+                      label: 'Cancel',
+                      icon: LucideIcons.x,
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.x1),
+                  Expanded(
+                    child: PrimaryButton(
+                      label: 'Apply',
+                      icon: LucideIcons.check,
+                      onPressed: _apply,
+                    ),
+                  ),
                 ],
               ),
             ],
-            Row(
-              children: [
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(AppSpacing.x0_5),
-                    child: _PercentKeyButton(
-                      label: 'C',
-                      destructive: true,
-                      onTap: _clear,
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(AppSpacing.x0_5),
-                    child: _PercentKeyButton(
-                      label: '0',
-                      onTap: () => _append('0'),
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(AppSpacing.x0_5),
-                    child: _PercentKeyButton(
-                      icon: LucideIcons.delete,
-                      onTap: _backspace,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.x2),
-            Row(
-              children: [
-                Expanded(
-                  child: SecondaryButton(
-                    label: 'Cancel',
-                    icon: LucideIcons.x,
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.x1),
-                Expanded(
-                  child: PrimaryButton(
-                    label: 'Apply',
-                    icon: LucideIcons.check,
-                    onPressed: _apply,
-                  ),
-                ),
-              ],
-            ),
-          ],
+          ),
         ),
       ),
     );

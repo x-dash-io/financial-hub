@@ -9,6 +9,7 @@ import 'package:financial_hub/shared/theme/app_radius.dart';
 import 'package:financial_hub/shared/theme/app_spacing.dart';
 import 'package:financial_hub/shared/theme/app_colors.dart';
 import 'package:financial_hub/shared/widgets/app_card.dart';
+import 'package:financial_hub/shared/widgets/app_number_keypad.dart';
 import 'package:financial_hub/shared/widgets/app_scaffold.dart';
 import 'package:financial_hub/shared/widgets/app_text_field.dart';
 import 'package:financial_hub/shared/widgets/primary_button.dart';
@@ -32,8 +33,11 @@ class AuthScreen extends StatefulWidget {
 }
 
 class _AuthScreenState extends State<AuthScreen> {
+  static const int _maxPhoneDigits = 15;
+
   final _formKey = GlobalKey<FormState>();
   final _phoneController = TextEditingController();
+  final _phoneFocusNode = FocusNode(canRequestFocus: false);
   final _mvpAuth = MvpAuthService();
   String _countryCode = '+254';
   int _step = 0;
@@ -48,6 +52,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
   @override
   void dispose() {
+    _phoneFocusNode.dispose();
     _phoneController.dispose();
     super.dispose();
   }
@@ -91,6 +96,7 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   void _goToPhoneStep() {
+    FocusManager.instance.primaryFocus?.unfocus();
     setState(() {
       _step = 1;
       _error = null;
@@ -114,6 +120,34 @@ class _AuthScreenState extends State<AuthScreen> {
     if (digits.length < 7) return false;
     if (digits.length > 15) return false;
     return true;
+  }
+
+  void _appendPhoneDigit(String digit) {
+    if (_loading) return;
+    final current = _phoneController.text.replaceAll(RegExp(r'\D'), '');
+    if (current.length >= _maxPhoneDigits) return;
+    setState(() {
+      _phoneController.text = '$current$digit';
+      _error = null;
+    });
+  }
+
+  void _backspacePhoneDigit() {
+    if (_loading) return;
+    final current = _phoneController.text.replaceAll(RegExp(r'\D'), '');
+    if (current.isEmpty) return;
+    setState(() {
+      _phoneController.text = current.substring(0, current.length - 1);
+      _error = null;
+    });
+  }
+
+  void _clearPhoneDigits() {
+    if (_loading || _phoneController.text.isEmpty) return;
+    setState(() {
+      _phoneController.clear();
+      _error = null;
+    });
   }
 
   Widget _buildIntroStep(BuildContext context) {
@@ -237,16 +271,32 @@ class _AuthScreenState extends State<AuthScreen> {
               controller: _phoneController,
               label: 'Phone number',
               hint: '712345678',
-              keyboardType: TextInputType.phone,
+              keyboardType: TextInputType.none,
+              focusNode: _phoneFocusNode,
+              readOnly: true,
+              showCursor: false,
+              enableInteractiveSelection: false,
+              onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
               prefixIcon: const Icon(
                 LucideIcons.phone,
                 size: 18,
                 color: AppColors.accentBlue,
               ),
-              onChanged: (_) => setState(() {}),
               validator: (v) => _validatePhone(v)
                   ? null
                   : 'Enter a valid phone number (7-15 digits)',
+            ),
+            const SizedBox(height: AppSpacing.x1),
+            Text(
+              'Use in-app keypad',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: AppSpacing.x0_5),
+            AppNumberKeypad(
+              enabled: !_loading,
+              onDigit: _appendPhoneDigit,
+              onBackspace: _backspacePhoneDigit,
+              onClear: _clearPhoneDigits,
             ),
             const SizedBox(height: AppSpacing.x2),
             WarningCard(
