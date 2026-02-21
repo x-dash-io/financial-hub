@@ -31,6 +31,7 @@ Core behavior:
 - Savings is locked from direct spend and cannot be the source pocket in reallocation.
 - Savings lock is currently continuous (no auto-expiry timer).
 - Savings percentage can be changed anytime in Money Plan.
+- Spend insights are shown as monthly totals and per-pocket monthly spent.
 
 See detailed flow: `HOW_IT_WORKS.md`
 
@@ -66,6 +67,10 @@ test/                   # unit/widget tests
 flutter pub get
 ```
 
+5. Auth provider (current MVP):
+- Enable **Anonymous Sign-Ins** in Supabase Auth.
+- Phone OTP auth is planned but not the active login path in this build.
+
 ## Run The App
 
 ```bash
@@ -89,17 +94,22 @@ Migrations currently include:
 - Default plan/pockets seed trigger function
 - Ledger balance invariant (`transactions` as source of truth, `pockets.cached_balance` derived)
 - Transaction source column for MPESA income tracking
+- Default savings floor update (10% baseline)
+- Dynamic pocket icon persistence + trigger-based icon auto-matching (`icon_key`, `icon_custom`)
 
 ## Current Status
 
 Implemented:
-- Onboarding + SMS permission request
+- Onboarding redesign + SMS permission request
 - MVP auth bootstrap (anonymous session + phone capture)
 - Money plan CRUD and validation
-- Pockets dashboard
+- Pockets dashboard redesign (premium card style + floating nav)
 - Allocation engine + simulate flow
 - SMS parsing/listening and allocation trigger
 - Spend + reallocation flows
+- Unified in-app numeric keypad for numeric money inputs
+- Dynamic pocket icons (auto-match + manual icon override/editing)
+- Monthly spend visibility (dashboard summary + per-pocket spent this month)
 - Behavioral report
 - Theming/tokenized colors across UI components
 
@@ -107,10 +117,17 @@ In progress:
 - Full Supabase phone OTP auth path
 - Dedicated post-allocation result for real SMS-triggered allocations (not only simulate)
 - E2E flow coverage and performance tuning
+- Android SMS plugin runtime alignment for some environments (`recvSMS` MissingPluginException)
+
+## Known Runtime Note (Android SMS)
+
+If you see:
+- `MissingPluginException` on `plugins.elyudde.com/recvSMS`
+
+the `sms_advanced` plugin host/activity wiring is not fully aligned at runtime. This repo currently handles the failure gracefully in-app (fallback messaging), and the platform-level alignment is tracked as a next fix.
 
 ## Documentation
 
 - Product requirements: `PRD.md`
 - Execution status and phase plan: `plan.md`
 - End-user/system behavior guide: `HOW_IT_WORKS.md`
-

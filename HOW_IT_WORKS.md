@@ -16,9 +16,10 @@ Repository: https://github.com/x-dash-io/Financial-Hub.git
 - Current MVP uses anonymous Supabase session + stored phone (OTP path is planned).
 
 3. Pockets Dashboard
-- User lands on category pockets, not a lump-sum-first view.
+- User lands on premium-style category pocket cards, not a lump-sum-first view.
 - Savings pocket is clearly marked as locked.
 - Spendable pockets are tappable for spending.
+- User sees monthly spending insights (overall + per-pocket).
 
 4. Income Allocation
 - Income is detected from strict sender `MPESA` or manually simulated.
@@ -27,6 +28,7 @@ Repository: https://github.com/x-dash-io/Financial-Hub.git
 
 5. Spending
 - User picks a spendable pocket and amount.
+- Amount entry uses in-app numeric keypad (finance flows use consistent keypad UX).
 - Savings cannot be spent from directly.
 - Overspend is blocked.
 
@@ -81,8 +83,30 @@ What is not time-configurable yet:
 - Minimal steps for common actions
 - Clear constraint messaging (locked savings, insufficient balance, etc.)
 - Reallocation friction to discourage impulsive movement
+- Consistent in-app numeric keypad for money/percentage input
+- Pocket icon semantics are dynamic: auto-match by name with optional manual override
 
-## 6. If You Want Time-Based Savings Lock (Future)
+## 6. Pocket Icons (Dynamic)
+
+- Pocket icon metadata is persisted in DB:
+  - `icon_key`
+  - `icon_custom`
+- If `icon_custom = false`, icon is auto-derived from pocket name keywords.
+- If `icon_custom = true`, user-selected icon is respected.
+- Savings icon is always enforced as `savings`.
+
+## 7. Android SMS Runtime Note
+
+On some Android runs you may see:
+- `MissingPluginException` on `plugins.elyudde.com/recvSMS`
+
+Current behavior:
+- App falls back gracefully (SMS auto-detect unavailable message).
+
+Tracked platform fix:
+- Align host activity/plugin runtime wiring for `sms_advanced` and validate on clean reinstall.
+
+## 8. Time-Based Savings Lock (Future)
 
 A future enhancement can introduce lock periods (for example: 7 days, 30 days):
 - Add a lock configuration field (e.g., `savings_unlock_at` or lock policy table).

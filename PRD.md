@@ -2,6 +2,15 @@ Financial Hub
 Behavioral Financial Operating System
  Android-First | Flutter + Supabase
 
+Implementation status note (2026-02-21):
+- This file remains the target product requirements document.
+- Current build deviations from target spec:
+  - Auth: MVP uses anonymous Supabase session + phone capture (OTP path pending).
+  - Numeric inputs: in-app keypad now used for finance amount/percentage flows.
+  - Pockets: dynamic icon system implemented (auto-match + manual override persisted in DB).
+  - Dashboard: premium card-style layout with animated balances and monthly spend insights.
+  - Known Android runtime issue under investigation: `sms_advanced` stream may throw `MissingPluginException` on some runs.
+
 1. PRODUCT VISION
 Financial Hub is a behavioral financial operating system that restructures how individuals perceive and allocate money before spending decisions occur.
 The system:
@@ -418,5 +427,4 @@ Financial Hub is not a bank.
 It begins as a behavioral financial operating system that restructures financial perception.
  It validates discipline before building financial rails.
  It scales responsibly into infrastructure once behavioral product-market fit is proven.
-
 
