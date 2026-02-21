@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:financial_hub/core/sms_income_listener.dart';
 import 'package:financial_hub/core/sms_parser.dart';
 import 'package:financial_hub/core/sms_permission.dart';
@@ -11,6 +12,7 @@ import 'package:financial_hub/features/money_plan/money_plan_screen.dart';
 import 'package:financial_hub/features/pockets/pockets_repository.dart';
 import 'package:financial_hub/features/reallocation/reallocate_sheet.dart';
 import 'package:financial_hub/features/spending/spend_sheet.dart';
+import 'package:financial_hub/shared/models/app_state.dart';
 import 'package:financial_hub/shared/models/pocket.dart';
 import 'package:financial_hub/shared/theme/app_colors.dart';
 import 'package:financial_hub/shared/theme/app_spacing.dart';
@@ -41,6 +43,7 @@ class _PocketsScreenState extends State<PocketsScreen> {
   String? _profileId;
   bool _loading = true;
   bool _smsPermissionAsked = false;
+  bool _navigating = false;
 
   @override
   void initState() {
@@ -60,7 +63,16 @@ class _PocketsScreenState extends State<PocketsScreen> {
     _smsPermissionAsked = true;
     final granted = await requestSmsPermission();
     if (granted) {
-      _smsListener.start(_onSmsIncomeParsed);
+      final started = await _smsListener.start(_onSmsIncomeParsed);
+      if (!started && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'SMS auto-detection is unavailable on this runtime. A full app restart usually resolves it.',
+            ),
+          ),
+        );
+      }
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -93,23 +105,35 @@ class _PocketsScreenState extends State<PocketsScreen> {
   }
 
   Future<void> _openMoneyPlan() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => MoneyPlanScreen(
-          onPlanChanged: () {
-            _loadPockets();
-          },
+    if (_navigating) return;
+    _navigating = true;
+    try {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => MoneyPlanScreen(
+            onPlanChanged: () {
+              _loadPockets();
+            },
+          ),
         ),
-      ),
-    );
+      );
+    } finally {
+      _navigating = false;
+    }
     if (!mounted) return;
     await _loadPockets();
   }
 
   Future<void> _openBehaviorReport() async {
-    await Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (_) => const BehaviorReportScreen()));
+    if (_navigating) return;
+    _navigating = true;
+    try {
+      await Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (_) => const BehaviorReportScreen()));
+    } finally {
+      _navigating = false;
+    }
     if (!mounted) return;
     await _loadPockets();
   }
@@ -180,6 +204,8 @@ class _PocketsScreenState extends State<PocketsScreen> {
     if (widget.onLogout != null) {
       await widget.onLogout!();
     } else {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(AppStateKeys.phone);
       await supabase.auth.signOut();
       if (mounted) setState(() {});
     }

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:financial_hub/core/supabase_client.dart';
 import 'package:financial_hub/features/money_plan/money_plan_screen.dart';
-import 'package:financial_hub/features/pockets/pockets_screen.dart';
 import 'package:financial_hub/shared/theme/app_spacing.dart';
 import 'package:financial_hub/shared/theme/app_colors.dart';
 import 'package:financial_hub/shared/widgets/app_bottom_nav.dart';
@@ -82,18 +81,12 @@ class _BehaviorReportScreenState extends State<BehaviorReportScreen> {
   void _onNavTap(int index) {
     switch (index) {
       case 0:
-        if (Navigator.of(context).canPop()) {
-          Navigator.of(context).pop();
-        } else {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const PocketsScreen()),
-          );
-        }
+        Navigator.of(context).popUntil((route) => route.isFirst);
         return;
       case 1:
-        Navigator.of(
-          context,
-        ).push(MaterialPageRoute(builder: (_) => const MoneyPlanScreen()));
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const MoneyPlanScreen()),
+        );
         return;
       case 2:
         return;

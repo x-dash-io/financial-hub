@@ -64,14 +64,14 @@ class MoneyPlanService {
         profileId: profileId,
         name: 'Default Plan',
         pockets: [
-          EditablePocketDraft(name: 'Savings', percentage: 50, isSavings: true),
+          EditablePocketDraft(name: 'Savings', percentage: 10, isSavings: true),
           EditablePocketDraft(
             name: 'Transport',
-            percentage: 20,
+            percentage: 30,
             isSavings: false,
           ),
-          EditablePocketDraft(name: 'Food', percentage: 20, isSavings: false),
-          EditablePocketDraft(name: 'Other', percentage: 10, isSavings: false),
+          EditablePocketDraft(name: 'Food', percentage: 30, isSavings: false),
+          EditablePocketDraft(name: 'Other', percentage: 30, isSavings: false),
         ],
       );
       plans = await _repo.getPlans(profileId);
@@ -123,7 +123,8 @@ class MoneyPlanService {
       throw StateError(error);
     }
 
-    await _repo.updatePlanName(planId: planId, name: planName.trim());
+    final normalizedPlanName = _normalizePlanName(planName);
+    await _repo.updatePlanName(planId: planId, name: normalizedPlanName);
 
     final existingPockets = await _repo.getPockets(planId);
     final incomingById = {
@@ -182,7 +183,7 @@ class MoneyPlanService {
       payload: {
         'action': 'update',
         'plan_id': planId,
-        'plan_name': planName.trim(),
+        'plan_name': normalizedPlanName,
         'allocations': pockets
             .map(
               (p) => {
@@ -246,6 +247,12 @@ class MoneyPlanService {
     );
 
     return planId;
+  }
+
+  String _normalizePlanName(String input) {
+    final name = input.trim();
+    if (name.isEmpty) return 'Default Plan';
+    return name;
   }
 
   Future<String> deletePlan({

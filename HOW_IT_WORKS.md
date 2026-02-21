@@ -42,7 +42,7 @@ Repository: https://github.com/x-dash-io/Financial-Hub.git
 
 Current savings behavior:
 - Minimum savings allocation: **10%**
-- Default seeded savings allocation: **50%**
+- Default seeded savings allocation: **10%**
 - Savings lock: **always on** (no expiry timer right now)
 - Direct spending from Savings: **not allowed**
 - Savings as source in reallocation: **not allowed**
@@ -90,4 +90,3 @@ A future enhancement can introduce lock periods (for example: 7 days, 30 days):
 - Expose lock-period controls in Money Plan UI.
 
 Current version does not implement this yet; it uses always-on lock.
-

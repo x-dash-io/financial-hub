@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:financial_hub/features/behavior/behavior_report_screen.dart';
 import 'package:financial_hub/features/money_plan/money_plan_service.dart';
-import 'package:financial_hub/features/pockets/pockets_screen.dart';
 import 'package:financial_hub/shared/theme/app_spacing.dart';
 import 'package:financial_hub/shared/theme/app_colors.dart';
 import 'package:financial_hub/shared/widgets/app_bottom_nav.dart';
@@ -302,20 +301,15 @@ class _MoneyPlanScreenState extends State<MoneyPlanScreen> {
   void _onNavTap(int index) {
     switch (index) {
       case 0:
-        if (Navigator.of(context).canPop()) {
-          Navigator.of(context).pop();
-        } else {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const PocketsScreen()),
-          );
-        }
+        Navigator.of(context).popUntil((route) => route.isFirst);
         return;
       case 1:
         return;
       case 2:
-        Navigator.of(
-          context,
-        ).push(MaterialPageRoute(builder: (_) => const BehaviorReportScreen()));
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const BehaviorReportScreen()),
+        );
+        return;
     }
   }
 
@@ -386,7 +380,8 @@ class _MoneyPlanScreenState extends State<MoneyPlanScreen> {
                       const SizedBox(height: AppSpacing.x2),
                       AppTextField(
                         controller: _planNameController,
-                        label: 'Plan name',
+                        label: 'Default plan name',
+                        hint: 'My Money Plan',
                         prefixIcon: const Icon(LucideIcons.pencil, size: 18),
                       ),
                       const SizedBox(height: AppSpacing.x2),

@@ -153,10 +153,10 @@ class MvpAuthService {
     };
 
     await supabase.from('money_plan_allocations').insert([
-      {'plan_id': planId, 'pocket_id': byName['Savings'], 'percentage': 50},
-      {'plan_id': planId, 'pocket_id': byName['Transport'], 'percentage': 20},
-      {'plan_id': planId, 'pocket_id': byName['Food'], 'percentage': 20},
-      {'plan_id': planId, 'pocket_id': byName['Other'], 'percentage': 10},
+      {'plan_id': planId, 'pocket_id': byName['Savings'], 'percentage': 10},
+      {'plan_id': planId, 'pocket_id': byName['Transport'], 'percentage': 30},
+      {'plan_id': planId, 'pocket_id': byName['Food'], 'percentage': 30},
+      {'plan_id': planId, 'pocket_id': byName['Other'], 'percentage': 30},
     ]);
 
     return planId;
